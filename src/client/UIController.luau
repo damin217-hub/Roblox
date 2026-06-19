@@ -5,6 +5,7 @@ local Localization = require(ReplicatedStorage.ArtAcademy.Localization)
 local Catalog = require(ReplicatedStorage.ArtAcademy.Catalog)
 local StrokeCodec = require(ReplicatedStorage.ArtAcademy.StrokeCodec)
 local CanvasController = require(script.Parent.CanvasController)
+local SoundController = require(script.Parent.SoundController)
 
 local UIController = {}
 UIController.__index = UIController
@@ -57,6 +58,7 @@ function UIController.new(remotes)
 	self.galleryData = { approved = {}, pending = {}, isAdmin = false }
 	self.colorButtons = {}
 	self.galleryCanvasController = nil
+	self.sounds = SoundController.new()
 	return self
 end
 
@@ -502,13 +504,19 @@ function UIController:_showChoices(choices)
 end
 
 function UIController:onState(payload)
+	local previousState = self.lastState and self.lastState.state or nil
 	self.lastState = payload
+	if previousState and previousState ~= payload.state then
+		self.sounds:play("round")
+	end
 	self.timer.Text = payload.seconds > 0 and tostring(payload.seconds) or "--"
 	local isArtist = payload.artistUserId == self.player.UserId
 	self.canvasController:setEnabled(payload.state == "Drawing" and isArtist, payload.mode)
 	self.guessBox.Visible = payload.state == "Drawing" and not isArtist
 
-	if payload.state == "Waiting" then self.status.Text = self.strings.waiting
+	if payload.state == "Waiting" then
+		local readyCount = payload.readyCount or 0
+		self.status.Text = string.format("%s  (%d ready)", self.strings.waiting, readyCount)
 	elseif payload.state == "Intermission" then self.status.Text = self.strings.intermission
 	elseif payload.state == "Choosing" then self.status.Text = self.strings.choosing
 	elseif payload.state == "Drawing" then self.status.Text = isArtist and self.strings.yourTurn or self.strings.drawing
@@ -544,8 +552,12 @@ function UIController:bind()
 	self.remotes.GuessBroadcast.OnClientEvent:Connect(function(message)
 		local line = message.correct and (message.name .. " ✓") or (message.name .. ": " .. message.text)
 		self.feed.Text = string.sub(self.feed.Text .. "\n" .. line, -500)
+		if message.correct then
+			self.sounds:play("success")
+		end
 	end)
 	self.remotes.Toast.OnClientEvent:Connect(function(message)
+		self.sounds:play("toast")
 		self.toast.Text = tostring(message)
 		self.toast.Visible = true
 		task.delay(2.5, function() self.toast.Visible = false end)

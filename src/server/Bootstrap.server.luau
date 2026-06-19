@@ -37,7 +37,14 @@ for _, descendant in workspace.ArtAcademyMap:GetDescendants() do
 	if descendant:IsA("ProximityPrompt") then
 		descendant.Triggered:Connect(function(player)
 			local objectText = descendant.ObjectText
-			if string.find(objectText, "모모") then
+			if descendant.Name == "MatchmakingPrompt" then
+				local joined = RoundService.toggleReady(player)
+				remotes.Toast:FireClient(
+					player,
+					joined and "Joined the next match queue! / 다음 게임 참가 완료"
+						or "Left the match queue. / 참가 취소"
+				)
+			elseif string.find(objectText, "모모") then
 				remotes.Toast:FireClient(player, "Choose, draw, guess, and earn coins! / 단어를 고르고 그림으로 맞혀보세요!")
 			elseif string.find(objectText, "상인") then
 				remotes.OpenPanel:FireClient(player, "shop")
@@ -79,6 +86,7 @@ for _, player in Players:GetPlayers() do
 end
 
 Players.PlayerRemoving:Connect(function(player)
+	RoundService.removePlayer(player)
 	PlayerDataService.remove(player)
 	ModerationService.removePlayer(player)
 end)
@@ -111,7 +119,7 @@ end)
 
 remotes.SubmitGuess.OnServerEvent:Connect(function(player, raw)
 	local state, artist, prompt = RoundService.getState()
-	if state ~= "Drawing" or player == artist or not prompt then return end
+	if state ~= "Drawing" or not RoundService.isParticipant(player) or player == artist or not prompt then return end
 	local result = GuessService.process(player, tostring(raw), prompt)
 	if not result then return end
 	local correct, points = RoundService.submitGuess(player, result.correct)

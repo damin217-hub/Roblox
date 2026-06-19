@@ -56,6 +56,25 @@ function MapService.build()
 	Lighting.Brightness = 2.5
 	Lighting.Ambient = Color3.fromRGB(155, 160, 190)
 	Lighting.OutdoorAmbient = Color3.fromRGB(180, 185, 210)
+	local bloom = Instance.new("BloomEffect")
+	bloom.Name = "AcademyBloom"
+	bloom.Intensity = 0.25
+	bloom.Size = 18
+	bloom.Threshold = 1.1
+	bloom.Parent = Lighting
+	local colorCorrection = Instance.new("ColorCorrectionEffect")
+	colorCorrection.Name = "AcademyColor"
+	colorCorrection.Saturation = 0.08
+	colorCorrection.Contrast = 0.04
+	colorCorrection.TintColor = Color3.fromRGB(255, 248, 255)
+	colorCorrection.Parent = Lighting
+	local atmosphere = Instance.new("Atmosphere")
+	atmosphere.Name = "AcademyAtmosphere"
+	atmosphere.Density = 0.18
+	atmosphere.Offset = 0.1
+	atmosphere.Color = Color3.fromRGB(210, 220, 255)
+	atmosphere.Decay = Color3.fromRGB(255, 225, 205)
+	atmosphere.Parent = Lighting
 
 	local map = Instance.new("Folder")
 	map.Name = "ArtAcademyMap"
@@ -73,6 +92,13 @@ function MapService.build()
 	center.Shape = Enum.PartType.Cylinder
 	center.Orientation = Vector3.new(0, 0, 90)
 	label(center, "PLAY  •  게임 시작", Color3.fromRGB(255, 255, 255))
+	local matchPrompt = Instance.new("ProximityPrompt")
+	matchPrompt.Name = "MatchmakingPrompt"
+	matchPrompt.ActionText = "Join / Leave Queue"
+	matchPrompt.ObjectText = "Match Portal / 매칭 포털"
+	matchPrompt.HoldDuration = 0
+	matchPrompt.MaxActivationDistance = 12
+	matchPrompt.Parent = center
 
 	npc(map, "큐레이터 모모 / Curator Momo", Vector3.new(-18, 1, -8), Color3.fromRGB(255, 116, 139), "튜토리얼 / Tutorial")
 	npc(map, "팔레트 상인 / Palette Merchant", Vector3.new(18, 1, -8), Color3.fromRGB(104, 190, 255), "상점 / Shop")

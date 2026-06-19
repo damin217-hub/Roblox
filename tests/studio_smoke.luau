@@ -108,13 +108,16 @@ for _, descendant in map:GetDescendants() do
 		npcCount += 1
 	end
 end
-check(npcCount == 4, "four interactive NPCs exist")
+check(npcCount == 5, "match portal and four interactive NPC prompts exist")
+check(map.MatchPortal:FindFirstChild("MatchmakingPrompt") ~= nil, "match portal exposes queue interaction")
 
 local clientFolder = StarterPlayer.StarterPlayerScripts:FindFirstChild("ArtAcademyClient")
 check(clientFolder ~= nil, "client controller folder exists")
 local CanvasController = require(clientFolder.CanvasController)
 local UIController = require(clientFolder.UIController)
+local SoundController = require(clientFolder.SoundController)
 check(type(UIController.new) == "function", "responsive UI controller module loads")
+check(type(SoundController.new) == "function", "UI sound controller module loads")
 local testCanvas = Instance.new("Frame")
 testCanvas.Size = UDim2.fromOffset(900, 600)
 local canvasController = CanvasController.new(testCanvas, {})

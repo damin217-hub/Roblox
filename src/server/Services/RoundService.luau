@@ -19,10 +19,39 @@ local roundId = ""
 local correctPlayers = {}
 local scores = {}
 local endDrawingEarly = false
+local readyPlayers = {}
+local matchPlayers = {}
+
+local function isActive(player: Player): boolean
+	return table.find(matchPlayers, player) ~= nil and player.Parent == Players
+end
+
+local function activeMatchPlayers()
+	local result = {}
+	for _, player in matchPlayers do
+		if player.Parent == Players then
+			table.insert(result, player)
+		end
+	end
+	return result
+end
+
+local function readyList()
+	local result = {}
+	for player in readyPlayers do
+		if player.Parent == Players then
+			table.insert(result, player)
+		end
+	end
+	table.sort(result, function(a, b)
+		return a.UserId < b.UserId
+	end)
+	return result
+end
 
 local function roster()
 	local list = {}
-	for _, player in Players:GetPlayers() do
+	for _, player in activeMatchPlayers() do
 		local data = PlayerDataService.get(player)
 		local titleId = data and data.equipped and data.equipped.title or ""
 		table.insert(list, {
@@ -61,9 +90,30 @@ local function countdown(seconds: number, extra, breaker)
 end
 
 local function chooseArtist(roundNumber: number)
-	local players = Players:GetPlayers()
+	local players = activeMatchPlayers()
 	if #players == 0 then return nil end
 	return players[((roundNumber - 1) % #players) + 1]
+end
+
+function RoundService.toggleReady(player: Player): boolean
+	if readyPlayers[player] then
+		readyPlayers[player] = nil
+		return false
+	end
+	readyPlayers[player] = true
+	return true
+end
+
+function RoundService.removePlayer(player: Player)
+	readyPlayers[player] = nil
+end
+
+function RoundService.isReady(player: Player): boolean
+	return readyPlayers[player] == true
+end
+
+function RoundService.isParticipant(player: Player): boolean
+	return isActive(player)
 end
 
 function RoundService.init(remoteTable, experienceMode: string)
@@ -86,7 +136,7 @@ function RoundService.choosePrompt(player: Player, promptId: string)
 end
 
 function RoundService.submitGuess(player: Player, correct: boolean)
-	if state ~= "Drawing" or player == artist or correctPlayers[player] then return false, 0 end
+	if state ~= "Drawing" or not isActive(player) or player == artist or correctPlayers[player] then return false, 0 end
 	if not correct then return false, 0 end
 	correctPlayers[player] = true
 	local position = 0
@@ -98,13 +148,13 @@ function RoundService.submitGuess(player: Player, correct: boolean)
 	PlayerDataService.incrementProgress(player, "guesses", 1)
 	PlayerDataService.add(player, "xp", points)
 	PlayerDataService.add(player, "coins", math.floor(points / 5))
-	if position >= math.max(1, #Players:GetPlayers() - 1) then endDrawingEarly = true end
+	if position >= math.max(1, #activeMatchPlayers() - 1) then endDrawingEarly = true end
 	return true, points
 end
 
 function RoundService.voteSkip(player: Player)
-	if state ~= "Drawing" or player == artist then return false end
-	if ModerationService.voteSkip(player, roundId, #Players:GetPlayers() - 1) then
+	if state ~= "Drawing" or not isActive(player) or player == artist then return false end
+	if ModerationService.voteSkip(player, roundId, #activeMatchPlayers() - 1) then
 		endDrawingEarly = true
 		return true
 	end
@@ -115,18 +165,23 @@ function RoundService.run()
 	while true do
 		state = "Waiting"
 		local requiredPlayers = RunService:IsStudio() and 1 or Config.MIN_PLAYERS
-		while #Players:GetPlayers() < requiredPlayers do
-			broadcast(0, { needed = requiredPlayers - #Players:GetPlayers() })
+		while #readyList() < requiredPlayers do
+			local readyCount = #readyList()
+			broadcast(0, { needed = requiredPlayers - readyCount, readyCount = readyCount })
 			task.wait(2)
 		end
 
+		matchPlayers = readyList()
+		while #matchPlayers > Config.MAX_PLAYERS do
+			table.remove(matchPlayers)
+		end
 		table.clear(scores)
-		for _, player in Players:GetPlayers() do scores[player] = 0 end
+		for _, player in matchPlayers do scores[player] = 0 end
 		state = "Intermission"
 		countdown(Config.INTERMISSION_SECONDS)
 
 		for roundNumber = 1, Config.ROUNDS_PER_MATCH do
-			if #Players:GetPlayers() < requiredPlayers then break end
+			if #activeMatchPlayers() < requiredPlayers then break end
 			artist = chooseArtist(roundNumber)
 			roundId = string.format("%d-%d-%d", os.time(), roundNumber, math.random(1000, 9999))
 			choices = PromptService.getChoices(3)
@@ -147,7 +202,7 @@ function RoundService.run()
 			state = "Drawing"
 			endDrawingEarly = false
 			PlayerDataService.add(artist, "drawings", 1)
-			for _, participant in Players:GetPlayers() do
+			for _, participant in activeMatchPlayers() do
 				PlayerDataService.incrementProgress(participant, "rounds", 1)
 			end
 			GalleryService.beginRound(roundId, artist, prompt)
@@ -174,6 +229,7 @@ function RoundService.run()
 			end
 		end
 		countdown(Config.RESULTS_SECONDS, { ranking = ranking })
+		table.clear(matchPlayers)
 	end
 end
 
