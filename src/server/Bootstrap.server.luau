@@ -12,6 +12,7 @@ local MapService = require(script.Services.MapService)
 local QuestService = require(script.Services.QuestService)
 local GalleryService = require(script.Services.GalleryService)
 local MonetizationService = require(script.Services.MonetizationService)
+local TelemetryService = require(script.Services.TelemetryService)
 
 local modeValue = ServerScriptService:FindFirstChild("ExperienceMode")
 local experienceMode = modeValue and modeValue.Value or "ALL_AGES"
@@ -39,6 +40,9 @@ for _, descendant in workspace.ArtAcademyMap:GetDescendants() do
 			local objectText = descendant.ObjectText
 			if descendant.Name == "MatchmakingPrompt" then
 				local joined = RoundService.toggleReady(player)
+				TelemetryService.log(player, joined and "queue_joined" or "queue_left", 1, {
+					mode = experienceMode,
+				})
 				remotes.Toast:FireClient(
 					player,
 					joined and "Joined the next match queue! / 다음 게임 참가 완료"
@@ -146,6 +150,7 @@ remotes.ReportDrawing.OnServerEvent:Connect(function(player, reason)
 	if ModerationService.allow(player, "report", 2, 30) then
 		ModerationService.report(player, artist, tostring(reason), roundId, CanvasService.getCount())
 		GalleryService.markReported()
+		TelemetryService.log(player, "drawing_reported", 1, { mode = experienceMode })
 		remotes.Toast:FireClient(player, "Report received. The canvas is hidden for you.")
 	end
 end)
@@ -166,6 +171,7 @@ remotes.PurchaseItem.OnServerEvent:Connect(function(player, itemId)
 	local ok, message = PlayerDataService.purchase(player, tostring(itemId))
 	remotes.Toast:FireClient(player, message)
 	if ok then
+		TelemetryService.log(player, "cosmetic_purchased", 1, { item = tostring(itemId) })
 		pushData(player)
 	end
 end)

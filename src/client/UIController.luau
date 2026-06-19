@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalizationService = game:GetService("LocalizationService")
+local StarterGui = game:GetService("StarterGui")
 local Localization = require(ReplicatedStorage.ArtAcademy.Localization)
 local Catalog = require(ReplicatedStorage.ArtAcademy.Catalog)
 local StrokeCodec = require(ReplicatedStorage.ArtAcademy.StrokeCodec)
@@ -212,7 +213,17 @@ function UIController:build()
 	end)
 	local skip = button(side, self.strings.skip, UDim2.new(0.48, -5, 0, 42), UDim2.new(0.52, 0, 0.79, 0), Color3.fromRGB(255, 156, 56))
 	skip.MouseButton1Click:Connect(function() self.remotes.VoteSkip:FireServer() end)
-	local report = button(side, self.strings.report, UDim2.new(1, -20, 0, 40), UDim2.new(0, 10, 0.89, 0), Color3.fromRGB(226, 67, 87))
+	local block = button(side, "Block / 차단", UDim2.new(0.48, -5, 0, 40), UDim2.new(0, 10, 0.89, 0), Color3.fromRGB(93, 100, 120))
+	block.MouseButton1Click:Connect(function()
+		local artistUserId = self.lastState and self.lastState.artistUserId or 0
+		local target = artistUserId > 0 and Players:GetPlayerByUserId(artistUserId) or nil
+		if target and target ~= self.player then
+			pcall(function()
+				StarterGui:SetCore("PromptBlockPlayer", target)
+			end)
+		end
+	end)
+	local report = button(side, self.strings.report, UDim2.new(0.48, -5, 0, 40), UDim2.new(0.52, 0, 0.89, 0), Color3.fromRGB(226, 67, 87))
 	report.MouseButton1Click:Connect(function()
 		self.remotes.ReportDrawing:FireServer("Inappropriate or disruptive drawing")
 		self.hidden = true

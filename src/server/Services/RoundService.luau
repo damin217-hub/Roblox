@@ -7,6 +7,7 @@ local CanvasService = require(script.Parent.CanvasService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ModerationService = require(script.Parent.ModerationService)
 local GalleryService = require(script.Parent.GalleryService)
+local TelemetryService = require(script.Parent.TelemetryService)
 
 local RoundService = {}
 local remotes
@@ -148,6 +149,10 @@ function RoundService.submitGuess(player: Player, correct: boolean)
 	PlayerDataService.incrementProgress(player, "guesses", 1)
 	PlayerDataService.add(player, "xp", points)
 	PlayerDataService.add(player, "coins", math.floor(points / 5))
+	TelemetryService.log(player, "correct_guess", points, {
+		mode = mode,
+		position = position,
+	})
 	if position >= math.max(1, #activeMatchPlayers() - 1) then endDrawingEarly = true end
 	return true, points
 end
@@ -177,6 +182,7 @@ function RoundService.run()
 		end
 		table.clear(scores)
 		for _, player in matchPlayers do scores[player] = 0 end
+		TelemetryService.logMany(matchPlayers, "match_started", #matchPlayers, { mode = mode })
 		state = "Intermission"
 		countdown(Config.INTERMISSION_SECONDS)
 
@@ -229,6 +235,7 @@ function RoundService.run()
 			end
 		end
 		countdown(Config.RESULTS_SECONDS, { ranking = ranking })
+		TelemetryService.logMany(activeMatchPlayers(), "match_completed", #ranking, { mode = mode })
 		table.clear(matchPlayers)
 	end
 end
