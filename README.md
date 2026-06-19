@@ -33,6 +33,25 @@ RobloxStudioBeta.exe --task RunScript `
 .\scripts\verify.ps1
 ```
 
+## Open Cloud 배포
+
+Creator Dashboard에서 두 개의 비공개 Experience와 `universe-places:write` 권한 API 키를 만든 뒤
+키와 ID를 환경변수로 설정합니다. 키를 파일에 저장하거나 Git에 커밋하지 마세요.
+
+```powershell
+$env:ROBLOX_API_KEY = "..."
+$env:ROBLOX_ALL_AGES_UNIVERSE_ID = "..."
+$env:ROBLOX_ALL_AGES_PLACE_ID = "..."
+$env:ROBLOX_FREE_DRAW_UNIVERSE_ID = "..."
+$env:ROBLOX_FREE_DRAW_PLACE_ID = "..."
+
+# QA용 저장 버전 업로드
+.\scripts\publish.ps1 -VersionType Saved
+
+# QA 승인 후 실제 게시 버전 업로드
+.\scripts\publish.ps1 -VersionType Published
+```
+
 ## 운영 설정
 
 - `src/shared/Config.luau`: 라운드 시간, 최소 인원, 획 제한
