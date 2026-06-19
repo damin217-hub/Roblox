@@ -101,14 +101,22 @@ function PlayerDataService.grantReceipt(player: Player, receiptKey: string, coin
 	local persistedData = nil
 	local ok = pcall(function()
 		persistedData = activeStore:UpdateAsync("player_" .. player.UserId, function(saved)
-			saved = type(saved) == "table" and saved or data
-			saved.receipts = type(saved.receipts) == "table" and saved.receipts or {}
-			if saved.receipts[receiptKey] then
-				return saved
+			local merged = table.clone(data)
+			merged.owned = table.clone(data.owned)
+			merged.equipped = table.clone(data.equipped)
+			merged.daily = table.clone(data.daily)
+			merged.claimedQuests = table.clone(data.claimedQuests)
+			merged.receipts = table.clone(data.receipts)
+			if type(saved) == "table" and type(saved.receipts) == "table" then
+				for previousReceipt in saved.receipts do
+					merged.receipts[previousReceipt] = true
+				end
 			end
-			saved.coins = (saved.coins or 0) + coinAmount
-			saved.receipts[receiptKey] = true
-			return saved
+			if not merged.receipts[receiptKey] then
+				merged.coins = (merged.coins or 0) + coinAmount
+				merged.receipts[receiptKey] = true
+			end
+			return merged
 		end)
 	end)
 	if not ok or type(persistedData) ~= "table" then
