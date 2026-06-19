@@ -146,7 +146,10 @@ remotes.VoteSkip.OnServerEvent:Connect(function(player)
 end)
 
 remotes.ReportDrawing.OnServerEvent:Connect(function(player, reason)
-	local _, artist, _, roundId = RoundService.getState()
+	local state, artist, _, roundId = RoundService.getState()
+	if state ~= "Drawing" and state ~= "Reveal" then
+		return
+	end
 	if ModerationService.allow(player, "report", 2, 30) then
 		ModerationService.report(player, artist, tostring(reason), roundId, CanvasService.getCount())
 		GalleryService.markReported()
@@ -156,6 +159,10 @@ remotes.ReportDrawing.OnServerEvent:Connect(function(player, reason)
 end)
 
 remotes.ReactToDrawing.OnServerEvent:Connect(function(player, reaction)
+	local state = RoundService.getState()
+	if state ~= "Reveal" then
+		return
+	end
 	if ModerationService.allow(player, "reaction", 4, 5) then
 		local allowed = { heart = true, laugh = true, wow = true }
 		if allowed[reaction] and GalleryService.react(player, reaction) then

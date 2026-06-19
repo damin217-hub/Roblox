@@ -1,6 +1,4 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
-local Config = require(ReplicatedStorage.ArtAcademy.Config)
 
 local ModerationService = {}
 local rateBuckets = {}
@@ -35,7 +33,14 @@ function ModerationService.allow(player: Player, action: string, limit: number, 
 end
 
 function ModerationService.report(reporter: Player, artist: Player?, reason: string, roundId: string, strokeCount: number)
-	reason = string.sub(reason, 1, Config.MAX_REPORT_REASON_LENGTH)
+	local allowedReasons = {
+		inappropriate = true,
+		harassment = true,
+		personal_info = true,
+		copyright = true,
+		disruptive = true,
+	}
+	reason = allowedReasons[reason] and reason or "inappropriate"
 	local record = {
 		timestamp = os.time(),
 		reporterUserId = reporter.UserId,

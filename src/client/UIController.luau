@@ -172,7 +172,9 @@ function UIController:build()
 	reactions.Size = UDim2.new(1, -20, 0, 38)
 	reactions.Position = UDim2.new(0, 10, 0.63, 0)
 	reactions.BackgroundTransparency = 1
+	reactions.Visible = false
 	reactions.Parent = side
+	self.reactions = reactions
 	for index, reaction in { "heart", "laugh", "wow" } do
 		local reactionButton = button(
 			reactions,
@@ -225,7 +227,7 @@ function UIController:build()
 	end)
 	local report = button(side, self.strings.report, UDim2.new(0.48, -5, 0, 40), UDim2.new(0.52, 0, 0.89, 0), Color3.fromRGB(226, 67, 87))
 	report.MouseButton1Click:Connect(function()
-		self.remotes.ReportDrawing:FireServer("Inappropriate or disruptive drawing")
+		self.remotes.ReportDrawing:FireServer("inappropriate")
 		self.hidden = true
 		self.canvas.Visible = false
 	end)
@@ -524,6 +526,7 @@ function UIController:onState(payload)
 	local isArtist = payload.artistUserId == self.player.UserId
 	self.canvasController:setEnabled(payload.state == "Drawing" and isArtist, payload.mode)
 	self.guessBox.Visible = payload.state == "Drawing" and not isArtist
+	self.reactions.Visible = payload.state == "Reveal"
 
 	if payload.state == "Waiting" then
 		local readyCount = payload.readyCount or 0
