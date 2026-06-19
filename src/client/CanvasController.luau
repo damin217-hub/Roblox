@@ -16,6 +16,16 @@ local COLORS = {
 	Color3.fromRGB(146, 92, 255),
 	Color3.fromRGB(255, 255, 255),
 }
+local CANDY_COLORS = {
+	Color3.fromRGB(62, 32, 82),
+	Color3.fromRGB(255, 93, 143),
+	Color3.fromRGB(255, 153, 204),
+	Color3.fromRGB(255, 218, 121),
+	Color3.fromRGB(121, 239, 196),
+	Color3.fromRGB(91, 205, 255),
+	Color3.fromRGB(180, 125, 255),
+	Color3.fromRGB(255, 255, 255),
+}
 
 function CanvasController.new(canvas: GuiObject, remotes)
 	local self = setmetatable({}, CanvasController)
@@ -26,6 +36,9 @@ function CanvasController.new(canvas: GuiObject, remotes)
 	self.color = COLORS[1]
 	self.size = 10
 	self.erase = false
+	self.stampType = "circle"
+	self.palette = COLORS
+	self.brushStyle = "classic"
 	self.drawing = false
 	self.last = nil
 	self.objects = {}
@@ -88,6 +101,20 @@ function CanvasController:setColor(color: Color3)
 	self.erase = false
 end
 
+function CanvasController:setStampType(stampType: string)
+	self.stampType = stampType == "square" and "square" or "circle"
+end
+
+function CanvasController:setCosmetics(equipped)
+	equipped = equipped or {}
+	self.palette = equipped.palette == "palette_candy" and CANDY_COLORS or COLORS
+	self.brushStyle = equipped.brush == "brush_neon" and "neon" or "classic"
+end
+
+function CanvasController:getPalette()
+	return self.palette
+end
+
 function CanvasController:setSize(size: number)
 	self.size = size
 end
@@ -147,10 +174,30 @@ function CanvasController:_drawEditableStroke(stroke)
 	local radius = math.max(1, math.floor(stroke.size / 2))
 	local color = stroke.erase and Color3.fromRGB(255, 255, 255)
 		or Color3.new(stroke.color.r, stroke.color.g, stroke.color.b)
+	if stroke.kind == "stamp" and stroke.stampType == "square" then
+		local diameter = radius * 2
+		image:DrawRectangle(
+			Vector2.new(math.floor(b.X - radius), math.floor(b.Y - radius)),
+			Vector2.new(diameter, diameter),
+			color,
+			0,
+			Enum.ImageCombineType.Overwrite
+		)
+		return
+	end
 	local steps = math.max(1, math.ceil(distance / math.max(1, radius * 0.65)))
 	for index = 0, steps do
 		local alpha = index / steps
 		local point = a:Lerp(b, alpha)
+		if stroke.brushStyle == "neon" and not stroke.erase then
+			image:DrawCircle(
+				Vector2.new(math.floor(point.X), math.floor(point.Y)),
+				radius + 3,
+				Color3.fromRGB(80, 235, 255),
+				0.45,
+				Enum.ImageCombineType.AlphaBlend
+			)
+		end
 		image:DrawCircle(
 			Vector2.new(math.floor(point.X), math.floor(point.Y)),
 			radius,
@@ -214,6 +261,25 @@ function CanvasController:clear()
 	self:_clearEditableImage()
 end
 
+function CanvasController:renderSnapshot(strokes)
+	self:clear()
+	for _, stroke in strokes do
+		self:_render(stroke)
+	end
+end
+
+function CanvasController:destroy()
+	self:clear()
+	if self.editableImage then
+		self.editableImage:Destroy()
+		self.editableImage = nil
+	end
+	if self.imageLabel then
+		self.imageLabel:Destroy()
+		self.imageLabel = nil
+	end
+end
+
 function CanvasController:undo(id)
 	local stroke = self.byId[id]
 	if stroke then
@@ -241,6 +307,8 @@ function CanvasController:_submit(point: Vector2)
 		color = { r = color.R, g = color.G, b = color.B },
 		erase = self.erase,
 		kind = self.mode == "ALL_AGES" and "stamp" or "line",
+		stampType = self.stampType,
+		brushStyle = self.brushStyle,
 	}
 	self.remotes.SubmitStroke:FireServer(payload)
 	self.last = point
@@ -258,6 +326,7 @@ function CanvasController:bind()
 	end)
 	UserInputService.InputChanged:Connect(function(input)
 		if not self.enabled or not self.drawing then return end
+		if self.mode == "ALL_AGES" then return end
 		if input.UserInputType == Enum.UserInputType.MouseMovement
 			or input.UserInputType == Enum.UserInputType.Touch then
 			self:_submit(self:_normalized(input.Position))
@@ -281,4 +350,5 @@ function CanvasController:bind()
 end
 
 CanvasController.COLORS = COLORS
+CanvasController.CANDY_COLORS = CANDY_COLORS
 return CanvasController

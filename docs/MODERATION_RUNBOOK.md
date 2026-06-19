@@ -4,7 +4,8 @@
 
 1. `src/shared/Config.luau`의 `ADMIN_USER_IDS`에 운영자 Roblox UserId를 숫자로 등록합니다.
 2. 운영자는 게임 안의 갤러리 관리자 NPC를 사용해 승인 대기 작품을 확인합니다.
-3. `Approve`는 시즌 갤러리에 공개하고 `Reject`는 대기 큐에서 제거합니다.
+3. `View`로 압축 저장된 작품을 재생해 검토합니다.
+4. `Approve`는 시즌 갤러리에 공개하고 `Reject`는 대기 큐에서 제거합니다.
 
 ## 처리 원칙
 

@@ -2,6 +2,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local Config = require(ReplicatedStorage.ArtAcademy.Config)
+local StrokeCodec = require(ReplicatedStorage.ArtAcademy.StrokeCodec)
 
 local GalleryService = {}
 local galleryStore = nil
@@ -62,7 +63,7 @@ function GalleryService.submitPending(strokes)
 	local record = table.clone(current)
 	record.status = "pending"
 	record.createdAt = os.time()
-	record.strokes = strokes
+	record.strokes = StrokeCodec.encode(strokes, Config.GALLERY_MAX_STROKES)
 	task.spawn(function()
 		pcall(function()
 			local activeStore = getGalleryStore()
@@ -89,7 +90,11 @@ function GalleryService.getApproved()
 		return activeStore and activeStore:GetAsync("approved_featured") or nil
 	end)
 	if ok and type(saved) == "table" then
-		return saved
+		local result = {}
+		for index = 1, math.min(#saved, 10) do
+			table.insert(result, saved[index])
+		end
+		return result
 	end
 	return {}
 end
@@ -109,10 +114,11 @@ function GalleryService.getPending(player: Player)
 	local ok, result = pcall(function()
 		local index = activeStore:GetAsync("pending_index") or {}
 		local pending = {}
-		for _, id in index do
+		local first = math.max(1, #index - 9)
+		for position = #index, first, -1 do
+			local id = index[position]
 			local record = activeStore:GetAsync("pending_" .. id)
 			if type(record) == "table" then
-				record.strokes = nil
 				table.insert(pending, record)
 			end
 		end
@@ -143,7 +149,6 @@ function GalleryService.moderate(player: Player, artworkId: string, decision: st
 			record.approvedAt = os.time()
 			activeStore:UpdateAsync("approved_featured", function(featured)
 				featured = type(featured) == "table" and featured or {}
-				record.strokes = nil
 				table.insert(featured, 1, record)
 				while #featured > 20 do
 					table.remove(featured)

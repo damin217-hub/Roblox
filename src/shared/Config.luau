@@ -9,11 +9,15 @@ return table.freeze({
 	INTERMISSION_SECONDS = 8,
 	MAX_STROKES_PER_ROUND = 1200,
 	MAX_STROKES_PER_SECOND = 30,
+	MAX_STAMPS_PER_ROUND = 240,
+	MAX_STAMPS_PER_SECOND = 8,
 	MAX_BRUSH_SIZE = 28,
 	MAX_REPORT_REASON_LENGTH = 120,
 	DATASTORE_NAME = "ArtAcademyPlayerData_v1",
 	GALLERY_DATASTORE_NAME = "ArtAcademyGallery_v1",
 	CANVAS_SIZE = Vector2.new(900, 600),
+	ALL_AGES_GRID = Vector2.new(24, 16),
+	GALLERY_MAX_STROKES = 400,
 	ADMIN_USER_IDS = {
 		-- 게시 전 운영자 Roblox UserId를 숫자로 추가하세요.
 	},

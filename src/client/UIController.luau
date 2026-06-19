@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalizationService = game:GetService("LocalizationService")
 local Localization = require(ReplicatedStorage.ArtAcademy.Localization)
 local Catalog = require(ReplicatedStorage.ArtAcademy.Catalog)
+local StrokeCodec = require(ReplicatedStorage.ArtAcademy.StrokeCodec)
 local CanvasController = require(script.Parent.CanvasController)
 
 local UIController = {}
@@ -54,6 +55,8 @@ function UIController.new(remotes)
 	self.playerData = nil
 	self.questData = {}
 	self.galleryData = { approved = {}, pending = {}, isAdmin = false }
+	self.colorButtons = {}
+	self.galleryCanvasController = nil
 	return self
 end
 
@@ -109,7 +112,7 @@ function UIController:build()
 	tools.BorderSizePixel = 0
 	tools.ScrollBarThickness = 4
 	tools.ScrollingDirection = Enum.ScrollingDirection.X
-	tools.CanvasSize = UDim2.fromOffset(625, 0)
+	tools.CanvasSize = UDim2.fromOffset(850, 0)
 	tools.Parent = main
 
 	for index, color in CanvasController.COLORS do
@@ -120,7 +123,10 @@ function UIController:build()
 		colorButton.BackgroundColor3 = color
 		colorButton.Parent = tools
 		corner(colorButton, 18)
-		colorButton.MouseButton1Click:Connect(function() self.canvasController:setColor(color) end)
+		table.insert(self.colorButtons, colorButton)
+		colorButton.MouseButton1Click:Connect(function()
+			self.canvasController:setColor(colorButton.BackgroundColor3)
+		end)
 	end
 	local erase = button(tools, "Eraser", UDim2.fromOffset(76, 36), UDim2.fromOffset(344, 8), Color3.fromRGB(93, 100, 120))
 	erase.MouseButton1Click:Connect(function() self.canvasController:setErase(true) end)
@@ -128,6 +134,22 @@ function UIController:build()
 	undo.MouseButton1Click:Connect(function() self.remotes.UndoStroke:FireServer() end)
 	local clear = button(tools, self.strings.clear, UDim2.fromOffset(82, 36), UDim2.fromOffset(528, 8), Color3.fromRGB(238, 89, 106))
 	clear.MouseButton1Click:Connect(function() self.remotes.ClearCanvas:FireServer() end)
+	local smaller = button(tools, "−", UDim2.fromOffset(42, 36), UDim2.fromOffset(618, 8), Color3.fromRGB(93, 100, 120))
+	smaller.MouseButton1Click:Connect(function()
+		self.canvasController:setSize(math.max(4, self.canvasController.size - 4))
+	end)
+	local larger = button(tools, "+", UDim2.fromOffset(42, 36), UDim2.fromOffset(666, 8), Color3.fromRGB(93, 100, 120))
+	larger.MouseButton1Click:Connect(function()
+		self.canvasController:setSize(math.min(28, self.canvasController.size + 4))
+	end)
+	local circleStamp = button(tools, "Circle", UDim2.fromOffset(62, 36), UDim2.fromOffset(716, 8), Color3.fromRGB(255, 156, 56))
+	circleStamp.MouseButton1Click:Connect(function()
+		self.canvasController:setStampType("circle")
+	end)
+	local squareStamp = button(tools, "Square", UDim2.fromOffset(64, 36), UDim2.fromOffset(784, 8), Color3.fromRGB(255, 156, 56))
+	squareStamp.MouseButton1Click:Connect(function()
+		self.canvasController:setStampType("square")
+	end)
 
 	local side = Instance.new("Frame")
 	side.Size = UDim2.new(0.28, -18, 1, -110)
@@ -278,11 +300,26 @@ function UIController:build()
 end
 
 function UIController:_clearModal()
+	if self.galleryCanvasController then
+		self.galleryCanvasController:destroy()
+		self.galleryCanvasController = nil
+	end
 	for _, child in self.modalList:GetChildren() do
 		if not child:IsA("UIListLayout") then
 			child:Destroy()
 		end
 	end
+end
+
+function UIController:_refreshPalette()
+	if not self.canvasController then
+		return
+	end
+	local palette = self.canvasController:getPalette()
+	for index, colorButton in self.colorButtons do
+		colorButton.BackgroundColor3 = palette[index] or CanvasController.COLORS[index]
+	end
+	self.canvasController:setColor(palette[1])
 end
 
 function UIController:_modalRow(titleValue: string, detailValue: string, actionText: string?, callback)
@@ -349,13 +386,19 @@ end
 
 function UIController:_openQuests()
 	self:_clearModal()
-	self.modalTitle.Text = "Daily Missions / 오늘의 미션"
+	self.modalTitle.Text = "Missions / 일일·주간 미션"
 	for _, quest in self.questData do
 		local complete = quest.progress >= quest.requirement
 		local actionText = quest.claimed and "Claimed" or (complete and "Claim" or "In progress")
 		self:_modalRow(
 			quest.nameKo .. " / " .. quest.nameEn,
-			string.format("%d / %d  •  +%d coins", quest.progress, quest.requirement, quest.reward),
+			string.format(
+				"%s  •  %d / %d  •  +%d coins",
+				string.upper(quest.scope or "daily"),
+				quest.progress,
+				quest.requirement,
+				quest.reward
+			),
 			actionText,
 			function()
 				if complete and not quest.claimed then
@@ -384,18 +427,23 @@ function UIController:_openGallery()
 			local rowTitle = text(
 				row,
 				artwork.promptKo .. " / " .. artwork.promptEn .. " — " .. artwork.artistName,
-				UDim2.new(0.58, 0, 1, 0),
+				UDim2.new(0.42, 0, 1, 0),
 				UDim2.fromOffset(14, 0),
 				16,
 				true
 			)
 			rowTitle.ZIndex = 62
-			local approve = button(row, "Approve", UDim2.new(0.18, 0, 0, 42), UDim2.new(0.6, 0, 0.5, -21), Color3.fromRGB(74, 190, 108))
+			local preview = button(row, "View", UDim2.new(0.16, 0, 0, 42), UDim2.new(0.43, 0, 0.5, -21), Color3.fromRGB(112, 83, 245))
+			preview.ZIndex = 63
+			preview.MouseButton1Click:Connect(function()
+				self:_showGalleryArtwork(artwork)
+			end)
+			local approve = button(row, "Approve", UDim2.new(0.18, 0, 0, 42), UDim2.new(0.61, 0, 0.5, -21), Color3.fromRGB(74, 190, 108))
 			approve.ZIndex = 63
 			approve.MouseButton1Click:Connect(function()
 				self.remotes.ModerateGallery:FireServer(artwork.id, "approve")
 			end)
-			local reject = button(row, "Reject", UDim2.new(0.18, 0, 0, 42), UDim2.new(0.8, 0, 0.5, -21), Color3.fromRGB(226, 67, 87))
+			local reject = button(row, "Reject", UDim2.new(0.18, 0, 0, 42), UDim2.new(0.81, 0, 0.5, -21), Color3.fromRGB(226, 67, 87))
 			reject.ZIndex = 63
 			reject.MouseButton1Click:Connect(function()
 				self.remotes.ModerateGallery:FireServer(artwork.id, "reject")
@@ -414,12 +462,28 @@ function UIController:_openGallery()
 			self:_modalRow(
 				artwork.promptKo .. " / " .. artwork.promptEn,
 				"by " .. artwork.artistName,
-				nil,
-				nil
+				"View",
+				function()
+					self:_showGalleryArtwork(artwork)
+				end
 			)
 		end
 	end
 	self.modal.Visible = true
+end
+
+function UIController:_showGalleryArtwork(artwork)
+	self:_clearModal()
+	self.modalTitle.Text = artwork.promptKo .. " / " .. artwork.promptEn .. " — " .. artwork.artistName
+	local preview = Instance.new("Frame")
+	preview.Size = UDim2.new(1, -20, 1, -20)
+	preview.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	preview.ClipsDescendants = true
+	preview.ZIndex = 62
+	preview.Parent = self.modalList
+	corner(preview, 12)
+	self.galleryCanvasController = CanvasController.new(preview, {})
+	self.galleryCanvasController:renderSnapshot(StrokeCodec.decode(artwork.strokes or {}))
 end
 
 function UIController:_showChoices(choices)
@@ -469,7 +533,8 @@ function UIController:onState(payload)
 
 	local lines = {}
 	for index, entry in payload.scores do
-		table.insert(lines, string.format("%d. %s  —  %d", index, entry.name, entry.score))
+		local titleSuffix = entry.title ~= "" and (" [" .. entry.title .. "]") or ""
+		table.insert(lines, string.format("%d. %s%s  —  %d", index, entry.name, titleSuffix, entry.score))
 	end
 	self.scoreList.Text = table.concat(lines, "\n")
 end
@@ -487,6 +552,8 @@ function UIController:bind()
 	end)
 	self.remotes.PlayerData.OnClientEvent:Connect(function(data)
 		self.playerData = data
+		self.canvasController:setCosmetics(data.equipped)
+		self:_refreshPalette()
 		self.currency.Text = tostring(data.coins or 0) .. " " .. self.strings.coins
 		if self.modal.Visible and string.find(self.modalTitle.Text, "Shop") then
 			self:_openShop()

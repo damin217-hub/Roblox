@@ -89,7 +89,9 @@ end)
 
 remotes.SubmitStroke.OnServerEvent:Connect(function(player, payload)
 	local state, artist = RoundService.getState()
-	local stroke = CanvasService.submit(player, payload, state == "Drawing" and player == artist, experienceMode)
+	local data = PlayerDataService.get(player)
+	local cosmetics = data and data.equipped or nil
+	local stroke = CanvasService.submit(player, payload, state == "Drawing" and player == artist, experienceMode, cosmetics)
 	if stroke then remotes.StrokeBroadcast:FireAllClients(stroke) end
 end)
 
@@ -191,7 +193,8 @@ remotes.RequestGallery.OnServerEvent:Connect(function(player, requestType, reque
 					quest.id,
 					quest.requirement,
 					quest.field,
-					quest.reward
+					quest.reward,
+					quest.scope
 				)
 				remotes.Toast:FireClient(player, message)
 				if ok then

@@ -5,6 +5,16 @@ local ModerationService = require(script.Parent.ModerationService)
 local CanvasService = {}
 local strokes = {}
 local perPlayerHistory = {}
+local ALL_AGES_COLORS = {
+	{ r = 0.12, g = 0.13, b = 0.19 },
+	{ r = 0.96, g = 0.26, b = 0.34 },
+	{ r = 1, g = 0.60, b = 0.20 },
+	{ r = 1, g = 0.86, b = 0.26 },
+	{ r = 0.29, g = 0.75, b = 0.42 },
+	{ r = 0.25, g = 0.59, b = 1 },
+	{ r = 0.57, g = 0.36, b = 1 },
+	{ r = 1, g = 1, b = 1 },
+}
 
 local function finite(value): boolean
 	return type(value) == "number" and value == value and math.abs(value) < 100000
@@ -23,10 +33,25 @@ function CanvasService.reset()
 	table.clear(perPlayerHistory)
 end
 
-function CanvasService.submit(player: Player, payload, isArtist: boolean, mode: string)
+local function nearestApprovedColor(color)
+	local best = ALL_AGES_COLORS[1]
+	local bestDistance = math.huge
+	for _, approved in ALL_AGES_COLORS do
+		local distance = (color.r - approved.r) ^ 2 + (color.g - approved.g) ^ 2 + (color.b - approved.b) ^ 2
+		if distance < bestDistance then
+			bestDistance = distance
+			best = approved
+		end
+	end
+	return table.clone(best)
+end
+
+function CanvasService.submit(player: Player, payload, isArtist: boolean, mode: string, cosmetics)
 	if not isArtist or type(payload) ~= "table" then return nil end
-	if #strokes >= Config.MAX_STROKES_PER_ROUND then return nil end
-	if not ModerationService.allow(player, "stroke", Config.MAX_STROKES_PER_SECOND, 1) then return nil end
+	local strokeLimit = mode == "ALL_AGES" and Config.MAX_STAMPS_PER_ROUND or Config.MAX_STROKES_PER_ROUND
+	local rateLimit = mode == "ALL_AGES" and Config.MAX_STAMPS_PER_SECOND or Config.MAX_STROKES_PER_SECOND
+	if #strokes >= strokeLimit then return nil end
+	if not ModerationService.allow(player, "stroke", rateLimit, 1) then return nil end
 	if not (finite(payload.x) and finite(payload.y) and finite(payload.px) and finite(payload.py)) then return nil end
 	for _, value in { payload.x, payload.y, payload.px, payload.py } do
 		if value < 0 or value > 1 then return nil end
@@ -35,8 +60,11 @@ function CanvasService.submit(player: Player, payload, isArtist: boolean, mode: 
 	local size = math.clamp(tonumber(payload.size) or 8, 2, Config.MAX_BRUSH_SIZE)
 	if mode == "ALL_AGES" and payload.kind ~= "stamp" then return nil end
 	if mode == "ALL_AGES" then
-		payload.px = payload.x
-		payload.py = payload.y
+		local grid = Config.ALL_AGES_GRID
+		payload.x = math.clamp(math.floor(payload.x * grid.X) / grid.X + 0.5 / grid.X, 0, 1)
+		payload.y = math.clamp(math.floor(payload.y * grid.Y) / grid.Y + 0.5 / grid.Y, 0, 1)
+		payload.px, payload.py = payload.x, payload.y
+		payload.color = nearestApprovedColor(payload.color)
 		size = math.clamp(size, 18, 28)
 	end
 	local stroke = {
@@ -50,6 +78,8 @@ function CanvasService.submit(player: Player, payload, isArtist: boolean, mode: 
 		color = payload.color,
 		erase = payload.erase == true,
 		kind = mode == "ALL_AGES" and "stamp" or "line",
+		stampType = mode == "ALL_AGES" and (payload.stampType == "square" and "square" or "circle") or nil,
+		brushStyle = cosmetics and cosmetics.brush == "brush_neon" and "neon" or "classic",
 	}
 	table.insert(strokes, stroke)
 	perPlayerHistory[player] = perPlayerHistory[player] or {}

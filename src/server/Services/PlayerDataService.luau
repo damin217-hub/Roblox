@@ -31,7 +31,9 @@ local DEFAULT = {
 	owned = { "brush_classic", "palette_basic" },
 	equipped = { brush = "brush_classic", palette = "palette_basic", title = "" },
 	daily = { date = "", guesses = 0, rounds = 0 },
+	weekly = { week = "", guesses = 0, rounds = 0, wins = 0 },
 	claimedQuests = {},
+	claims = { daily = {}, weekly = {} },
 	receipts = {},
 }
 
@@ -45,7 +47,9 @@ local function cloneDefault()
 		owned = table.clone(DEFAULT.owned),
 		equipped = table.clone(DEFAULT.equipped),
 		daily = table.clone(DEFAULT.daily),
+		weekly = table.clone(DEFAULT.weekly),
 		claimedQuests = table.clone(DEFAULT.claimedQuests),
+		claims = { daily = {}, weekly = {} },
 		receipts = table.clone(DEFAULT.receipts),
 	}
 end
@@ -77,7 +81,11 @@ function PlayerDataService.load(player: Player)
 	data.owned = type(data.owned) == "table" and data.owned or table.clone(DEFAULT.owned)
 	data.equipped = type(data.equipped) == "table" and data.equipped or table.clone(DEFAULT.equipped)
 	data.daily = type(data.daily) == "table" and data.daily or table.clone(DEFAULT.daily)
+	data.weekly = type(data.weekly) == "table" and data.weekly or table.clone(DEFAULT.weekly)
 	data.claimedQuests = type(data.claimedQuests) == "table" and data.claimedQuests or {}
+	data.claims = type(data.claims) == "table" and data.claims or { daily = {}, weekly = {} }
+	data.claims.daily = type(data.claims.daily) == "table" and data.claims.daily or {}
+	data.claims.weekly = type(data.claims.weekly) == "table" and data.claims.weekly or {}
 	data.receipts = type(data.receipts) == "table" and data.receipts or {}
 	sessions[player] = data
 	return data
@@ -105,7 +113,12 @@ function PlayerDataService.grantReceipt(player: Player, receiptKey: string, coin
 			merged.owned = table.clone(data.owned)
 			merged.equipped = table.clone(data.equipped)
 			merged.daily = table.clone(data.daily)
+			merged.weekly = table.clone(data.weekly)
 			merged.claimedQuests = table.clone(data.claimedQuests)
+			merged.claims = {
+				daily = table.clone(data.claims.daily),
+				weekly = table.clone(data.claims.weekly),
+			}
 			merged.receipts = table.clone(data.receipts)
 			if type(saved) == "table" and type(saved.receipts) == "table" then
 				for previousReceipt in saved.receipts do
@@ -169,7 +182,7 @@ function PlayerDataService.equip(player: Player, itemId: string)
 	return true, "Equipped"
 end
 
-function PlayerDataService.incrementDaily(player: Player, field: string, amount: number)
+function PlayerDataService.incrementProgress(player: Player, field: string, amount: number)
 	local data = sessions[player]
 	if not data then
 		return
@@ -177,24 +190,40 @@ function PlayerDataService.incrementDaily(player: Player, field: string, amount:
 	local today = os.date("!%Y-%m-%d")
 	if data.daily.date ~= today then
 		data.daily = { date = today, guesses = 0, rounds = 0 }
-		data.claimedQuests = {}
+		data.claims.daily = {}
+	end
+	local week = os.date("!%Y-W%W")
+	if data.weekly.week ~= week then
+		data.weekly = { week = week, guesses = 0, rounds = 0, wins = 0 }
+		data.claims.weekly = {}
 	end
 	data.daily[field] = (data.daily[field] or 0) + amount
+	data.weekly[field] = (data.weekly[field] or 0) + amount
 	dirty[player] = true
 end
 
-function PlayerDataService.claimQuest(player: Player, questId: string, requirement: number, field: string, reward: number)
+function PlayerDataService.claimQuest(
+	player: Player,
+	questId: string,
+	requirement: number,
+	field: string,
+	reward: number,
+	scope: string
+)
 	local data = sessions[player]
 	if not data then
 		return false, "No data"
 	end
-	if data.claimedQuests[questId] then
+	local questScope = scope == "weekly" and "weekly" or "daily"
+	local progress = data[questScope]
+	local claims = data.claims[questScope]
+	if claims[questId] then
 		return false, "Already claimed"
 	end
-	if (data.daily[field] or 0) < requirement then
+	if (progress[field] or 0) < requirement then
 		return false, "Not complete"
 	end
-	data.claimedQuests[questId] = true
+	claims[questId] = true
 	data.coins += reward
 	dirty[player] = true
 	return true, "Claimed"

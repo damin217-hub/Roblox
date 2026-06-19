@@ -14,6 +14,7 @@ check(shared ~= nil, "ReplicatedStorage.ArtAcademy exists")
 check(shared:FindFirstChild("Config") ~= nil, "Config module exists")
 check(shared:FindFirstChild("Prompts") ~= nil, "Prompt catalog exists")
 check(shared:FindFirstChild("Catalog") ~= nil, "Cosmetic catalog exists")
+check(shared:FindFirstChild("StrokeCodec") ~= nil, "Stroke codec exists")
 
 local server = ServerScriptService:FindFirstChild("ArtAcademyServer")
 check(server ~= nil, "ArtAcademyServer exists")
@@ -42,6 +43,7 @@ local PromptService = require(services.PromptService)
 local MapService = require(services.MapService)
 local CanvasService = require(services.CanvasService)
 local QuestService = require(services.QuestService)
+local StrokeCodec = require(shared.StrokeCodec)
 
 check(Config.ROUNDS_PER_MATCH == 5, "match contains five rounds")
 check(Config.DRAWING_SECONDS == 75, "drawing timer is 75 seconds")
@@ -70,14 +72,30 @@ check(CanvasService.submit(fakeArtist, invalidStroke, true, "FREE_DRAW_16_PLUS")
 check(CanvasService.submit(fakeArtist, validStroke, true, "ALL_AGES") == nil, "all-ages mode rejects freehand line")
 local stamp = table.clone(validStroke)
 stamp.kind = "stamp"
-check(CanvasService.submit(fakeArtist, stamp, true, "ALL_AGES") ~= nil, "all-ages mode accepts approved stamp")
+stamp.x = 0.51
+stamp.y = 0.51
+stamp.stampType = "square"
+local originalStampX, originalStampY = stamp.x, stamp.y
+local acceptedStamp = CanvasService.submit(fakeArtist, stamp, true, "ALL_AGES")
+check(acceptedStamp ~= nil, "all-ages mode accepts approved stamp")
+check(acceptedStamp.px == acceptedStamp.x and acceptedStamp.py == acceptedStamp.y, "all-ages stamp cannot form a freehand line")
+check(acceptedStamp.x ~= originalStampX or acceptedStamp.y ~= originalStampY, "all-ages stamp position snaps to a safe grid")
+check(acceptedStamp.stampType == "square", "approved stamp shape is preserved")
+
+local encoded = StrokeCodec.encode({ acceptedStamp }, 1)
+local decoded = StrokeCodec.decode(encoded)
+check(#encoded == 1 and #decoded == 1, "gallery stroke codec round-trips")
+check(decoded[1].kind == "stamp" and decoded[1].stampType == "square", "gallery codec preserves stamp metadata")
 
 local questData = QuestService.getForData({
 	daily = { guesses = 3, rounds = 1 },
+	weekly = { guesses = 10, rounds = 4, wins = 1 },
+	claims = { daily = {}, weekly = {} },
 	claimedQuests = {},
 })
-check(#questData == 2, "daily quest definitions load")
+check(#questData == 4, "daily and weekly quest definitions load")
 check(questData[1].progress == 3, "daily quest progress is calculated")
+check(questData[3].scope == "weekly" and questData[3].progress == 10, "weekly quest progress is calculated")
 
 MapService.build()
 local map = workspace:FindFirstChild("ArtAcademyMap")
@@ -95,12 +113,17 @@ check(npcCount == 4, "four interactive NPCs exist")
 local clientFolder = StarterPlayer.StarterPlayerScripts:FindFirstChild("ArtAcademyClient")
 check(clientFolder ~= nil, "client controller folder exists")
 local CanvasController = require(clientFolder.CanvasController)
+local UIController = require(clientFolder.UIController)
+check(type(UIController.new) == "function", "responsive UI controller module loads")
 local testCanvas = Instance.new("Frame")
 testCanvas.Size = UDim2.fromOffset(900, 600)
 local canvasController = CanvasController.new(testCanvas, {})
 check(canvasController.editableImage ~= nil, "EditableImage renderer initializes")
 check(canvasController.imageLabel ~= nil, "EditableImage is bound to an ImageLabel")
-canvasController.editableImage:Destroy()
+canvasController:setCosmetics({ brush = "brush_neon", palette = "palette_candy" })
+check(canvasController.brushStyle == "neon", "equipped brush cosmetic changes renderer style")
+check(canvasController:getPalette() == CanvasController.CANDY_COLORS, "equipped palette cosmetic changes colors")
+canvasController:destroy()
 testCanvas:Destroy()
 
 print("[SMOKE COMPLETE] Art Academy project structure and core modules validated")

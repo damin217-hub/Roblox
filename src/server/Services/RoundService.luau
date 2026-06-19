@@ -23,7 +23,14 @@ local endDrawingEarly = false
 local function roster()
 	local list = {}
 	for _, player in Players:GetPlayers() do
-		table.insert(list, { userId = player.UserId, name = player.DisplayName, score = scores[player] or 0 })
+		local data = PlayerDataService.get(player)
+		local titleId = data and data.equipped and data.equipped.title or ""
+		table.insert(list, {
+			userId = player.UserId,
+			name = player.DisplayName,
+			score = scores[player] or 0,
+			title = titleId == "title_quick_thinker" and "Quick Thinker" or "",
+		})
 	end
 	table.sort(list, function(a, b) return a.score > b.score end)
 	return list
@@ -88,7 +95,7 @@ function RoundService.submitGuess(player: Player, correct: boolean)
 	scores[player] = (scores[player] or 0) + points
 	scores[artist] = (scores[artist] or 0) + 15
 	PlayerDataService.add(player, "correctGuesses", 1)
-	PlayerDataService.incrementDaily(player, "guesses", 1)
+	PlayerDataService.incrementProgress(player, "guesses", 1)
 	PlayerDataService.add(player, "xp", points)
 	PlayerDataService.add(player, "coins", math.floor(points / 5))
 	if position >= math.max(1, #Players:GetPlayers() - 1) then endDrawingEarly = true end
@@ -140,7 +147,9 @@ function RoundService.run()
 			state = "Drawing"
 			endDrawingEarly = false
 			PlayerDataService.add(artist, "drawings", 1)
-			PlayerDataService.incrementDaily(artist, "rounds", 1)
+			for _, participant in Players:GetPlayers() do
+				PlayerDataService.incrementProgress(participant, "rounds", 1)
+			end
 			GalleryService.beginRound(roundId, artist, prompt)
 			countdown(Config.DRAWING_SECONDS, {
 				prompt = { ko = prompt.ko, en = prompt.en },
@@ -160,6 +169,7 @@ function RoundService.run()
 			local winner = Players:GetPlayerByUserId(ranking[1].userId)
 			if winner then
 				PlayerDataService.add(winner, "wins", 1)
+				PlayerDataService.incrementProgress(winner, "wins", 1)
 				PlayerDataService.add(winner, "coins", 50)
 			end
 		end
