@@ -47,3 +47,9 @@ drawing, guessing, party game, art, friends, 그림, 그림퀴즈, 드로잉, �
 - Genre: Party / Social
 - Private servers: enable for friend groups
 - API Services: enable only for published QA environments that test DataStore
+
+## Cosmetic monetization setup
+
+Create one cosmetic bundle Game Pass and optional coin-pack Developer Products. Enter their numeric IDs in
+`Config.MONETIZATION`. The bundle grants only cosmetic items; coin packs can only accelerate cosmetic unlocks.
+Keep all IDs at `0` until the products exist and have been reviewed.

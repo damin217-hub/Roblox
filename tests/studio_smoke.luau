@@ -29,6 +29,7 @@ for _, serviceName in {
 	"ModerationService",
 	"QuestService",
 	"GalleryService",
+	"MonetizationService",
 	"MapService",
 } do
 	check(services:FindFirstChild(serviceName) ~= nil, serviceName .. " exists")

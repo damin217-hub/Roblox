@@ -32,6 +32,7 @@ local DEFAULT = {
 	equipped = { brush = "brush_classic", palette = "palette_basic", title = "" },
 	daily = { date = "", guesses = 0, rounds = 0 },
 	claimedQuests = {},
+	receipts = {},
 }
 
 local function cloneDefault()
@@ -45,6 +46,7 @@ local function cloneDefault()
 		equipped = table.clone(DEFAULT.equipped),
 		daily = table.clone(DEFAULT.daily),
 		claimedQuests = table.clone(DEFAULT.claimedQuests),
+		receipts = table.clone(DEFAULT.receipts),
 	}
 end
 
@@ -76,8 +78,46 @@ function PlayerDataService.load(player: Player)
 	data.equipped = type(data.equipped) == "table" and data.equipped or table.clone(DEFAULT.equipped)
 	data.daily = type(data.daily) == "table" and data.daily or table.clone(DEFAULT.daily)
 	data.claimedQuests = type(data.claimedQuests) == "table" and data.claimedQuests or {}
+	data.receipts = type(data.receipts) == "table" and data.receipts or {}
 	sessions[player] = data
 	return data
+end
+
+function PlayerDataService.markDirty(player: Player)
+	if sessions[player] then
+		dirty[player] = true
+	end
+end
+
+function PlayerDataService.grantReceipt(player: Player, receiptKey: string, coinAmount: number): boolean
+	local data = sessions[player]
+	if not data then
+		return false
+	end
+	local activeStore = getStore()
+	if not activeStore then
+		return false
+	end
+	local persistedData = nil
+	local ok = pcall(function()
+		persistedData = activeStore:UpdateAsync("player_" .. player.UserId, function(saved)
+			saved = type(saved) == "table" and saved or data
+			saved.receipts = type(saved.receipts) == "table" and saved.receipts or {}
+			if saved.receipts[receiptKey] then
+				return saved
+			end
+			saved.coins = (saved.coins or 0) + coinAmount
+			saved.receipts[receiptKey] = true
+			return saved
+		end)
+	end)
+	if not ok or type(persistedData) ~= "table" then
+		dirty[player] = true
+		return false
+	end
+	sessions[player] = persistedData
+	dirty[player] = nil
+	return true
 end
 
 function PlayerDataService.get(player: Player)
@@ -155,6 +195,7 @@ end
 function PlayerDataService.save(player: Player)
 	local data = sessions[player]
 	if not data then return end
+	local persisted = false
 	local ok = pcall(function()
 		local activeStore = getStore()
 		if not activeStore then
@@ -163,8 +204,14 @@ function PlayerDataService.save(player: Player)
 		activeStore:UpdateAsync("player_" .. player.UserId, function()
 			return data
 		end)
+		persisted = true
 	end)
-	if ok then dirty[player] = nil end
+	if ok and persisted then
+		dirty[player] = nil
+	else
+		dirty[player] = true
+	end
+	return ok and persisted
 end
 
 function PlayerDataService.remove(player: Player)

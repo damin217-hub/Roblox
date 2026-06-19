@@ -17,4 +17,10 @@ return table.freeze({
 	ADMIN_USER_IDS = {
 		-- 게시 전 운영자 Roblox UserId를 숫자로 추가하세요.
 	},
+	MONETIZATION = {
+		-- Creator Dashboard에서 만든 ID로 교체하세요. 0은 비활성화 상태입니다.
+		COSMETIC_BUNDLE_GAMEPASS_ID = 0,
+		COIN_PACK_SMALL_PRODUCT_ID = 0,
+		COIN_PACK_LARGE_PRODUCT_ID = 0,
+	},
 })

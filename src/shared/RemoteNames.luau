@@ -20,4 +20,5 @@ return table.freeze({
 	"GalleryData",
 	"QuestData",
 	"ModerateGallery",
+	"PurchasePremium",
 })

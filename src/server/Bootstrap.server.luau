@@ -11,6 +11,7 @@ local RoundService = require(script.Services.RoundService)
 local MapService = require(script.Services.MapService)
 local QuestService = require(script.Services.QuestService)
 local GalleryService = require(script.Services.GalleryService)
+local MonetizationService = require(script.Services.MonetizationService)
 
 local modeValue = ServerScriptService:FindFirstChild("ExperienceMode")
 local experienceMode = modeValue and modeValue.Value or "ALL_AGES"
@@ -63,13 +64,17 @@ local function pushData(player: Player)
 	if data then remotes.PlayerData:FireClient(player, data) end
 end
 
+MonetizationService.init(PlayerDataService, pushData)
+
 Players.PlayerAdded:Connect(function(player)
 	PlayerDataService.load(player)
+	MonetizationService.onPlayerLoaded(player)
 	task.defer(pushData, player)
 end)
 
 for _, player in Players:GetPlayers() do
 	PlayerDataService.load(player)
+	MonetizationService.onPlayerLoaded(player)
 	task.defer(pushData, player)
 end
 
@@ -210,6 +215,15 @@ remotes.ModerateGallery.OnServerEvent:Connect(function(player, artworkId, decisi
 			pending = GalleryService.getPending(player),
 			isAdmin = true,
 		})
+	end
+end)
+
+remotes.PurchasePremium.OnServerEvent:Connect(function(player, productType)
+	if not ModerationService.allow(player, "premium_prompt", 2, 10) then
+		return
+	end
+	if not MonetizationService.prompt(player, tostring(productType)) then
+		remotes.Toast:FireClient(player, "Premium product is not configured yet.")
 	end
 end)
 

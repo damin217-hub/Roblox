@@ -308,6 +308,22 @@ end
 function UIController:_openShop()
 	self:_clearModal()
 	self.modalTitle.Text = "Palette Shop / 팔레트 상점"
+	self:_modalRow(
+		"프리미엄 아트 번들 / Premium Art Bundle",
+		"Neon Brush + Candy Palette + Quick Thinker",
+		"Robux",
+		function()
+			self.remotes.PurchasePremium:FireServer("bundle")
+		end
+	)
+	self:_modalRow(
+		"코인 묶음 / Coin Pack",
+		"꾸미기 아이템 구매용 500 coins",
+		"Robux",
+		function()
+			self.remotes.PurchasePremium:FireServer("coins_small")
+		end
+	)
 	local data = self.playerData or { owned = {}, equipped = {} }
 	for _, item in Catalog do
 		local owned = table.find(data.owned or {}, item.id) ~= nil
