@@ -1,4 +1,7 @@
 local UserInputService = game:GetService("UserInputService")
+local AssetService = game:GetService("AssetService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.ArtAcademy.Config)
 
 local CanvasController = {}
 CanvasController.__index = CanvasController
@@ -27,7 +30,52 @@ function CanvasController.new(canvas: GuiObject, remotes)
 	self.last = nil
 	self.objects = {}
 	self.byId = {}
+	self.strokes = {}
+	self.editableImage = nil
+	self.imageLabel = nil
+	self:_initializeEditableImage()
 	return self
+end
+
+function CanvasController:_initializeEditableImage()
+	local ok, editable = pcall(function()
+		return AssetService:CreateEditableImage({ Size = Config.CANVAS_SIZE })
+	end)
+	if not ok or not editable then
+		return
+	end
+
+	local imageLabel = Instance.new("ImageLabel")
+	imageLabel.Name = "EditableCanvas"
+	imageLabel.Size = UDim2.fromScale(1, 1)
+	imageLabel.BackgroundTransparency = 1
+	imageLabel.ScaleType = Enum.ScaleType.Stretch
+	imageLabel.ZIndex = 3
+	local assigned = pcall(function()
+		imageLabel.ImageContent = Content.fromObject(editable)
+	end)
+	if not assigned then
+		editable:Destroy()
+		imageLabel:Destroy()
+		return
+	end
+	imageLabel.Parent = self.canvas
+	self.editableImage = editable
+	self.imageLabel = imageLabel
+	self:_clearEditableImage()
+end
+
+function CanvasController:_clearEditableImage()
+	if not self.editableImage then
+		return
+	end
+	self.editableImage:DrawRectangle(
+		Vector2.zero,
+		self.editableImage.Size,
+		Color3.fromRGB(255, 255, 255),
+		0,
+		Enum.ImageCombineType.Overwrite
+	)
 end
 
 function CanvasController:setEnabled(enabled: boolean, mode: string)
@@ -58,6 +106,12 @@ function CanvasController:_normalized(inputPosition: Vector2)
 end
 
 function CanvasController:_render(stroke)
+	table.insert(self.strokes, stroke)
+	self.byId[stroke.id] = stroke
+	if self.editableImage then
+		self:_drawEditableStroke(stroke)
+		return
+	end
 	local a = Vector2.new(stroke.px, stroke.py) * self.canvas.AbsoluteSize
 	local b = Vector2.new(stroke.x, stroke.y) * self.canvas.AbsoluteSize
 	local delta = b - a
@@ -77,23 +131,103 @@ function CanvasController:_render(stroke)
 	corner.Parent = line
 	line.Parent = self.canvas
 	table.insert(self.objects, line)
-	self.byId[stroke.id] = line
+	self.byId[stroke.id] = stroke
+	stroke.fallbackObject = line
+end
+
+function CanvasController:_drawEditableStroke(stroke)
+	local image = self.editableImage
+	if not image then
+		return
+	end
+	local a = Vector2.new(stroke.px, stroke.py) * image.Size
+	local b = Vector2.new(stroke.x, stroke.y) * image.Size
+	local delta = b - a
+	local distance = delta.Magnitude
+	local radius = math.max(1, math.floor(stroke.size / 2))
+	local color = stroke.erase and Color3.fromRGB(255, 255, 255)
+		or Color3.new(stroke.color.r, stroke.color.g, stroke.color.b)
+	local steps = math.max(1, math.ceil(distance / math.max(1, radius * 0.65)))
+	for index = 0, steps do
+		local alpha = index / steps
+		local point = a:Lerp(b, alpha)
+		image:DrawCircle(
+			Vector2.new(math.floor(point.X), math.floor(point.Y)),
+			radius,
+			color,
+			0,
+			Enum.ImageCombineType.Overwrite
+		)
+	end
+end
+
+function CanvasController:_rebuild()
+	if self.editableImage then
+		self:_clearEditableImage()
+		for _, stroke in self.strokes do
+			self:_drawEditableStroke(stroke)
+		end
+		return
+	end
+	for _, object in self.objects do
+		object:Destroy()
+	end
+	table.clear(self.objects)
+	for _, stroke in self.strokes do
+		local fallbackObject = stroke.fallbackObject
+		stroke.fallbackObject = nil
+		self:_renderFallback(stroke)
+		if fallbackObject then
+			fallbackObject:Destroy()
+		end
+	end
+end
+
+function CanvasController:_renderFallback(stroke)
+	local a = Vector2.new(stroke.px, stroke.py) * self.canvas.AbsoluteSize
+	local b = Vector2.new(stroke.x, stroke.y) * self.canvas.AbsoluteSize
+	local delta = b - a
+	local length = math.max(delta.Magnitude, stroke.size)
+	local line = Instance.new("Frame")
+	line.Name = "Stroke_" .. tostring(stroke.id)
+	line.AnchorPoint = Vector2.new(0.5, 0.5)
+	line.Position = UDim2.fromOffset((a.X + b.X) / 2, (a.Y + b.Y) / 2)
+	line.Size = UDim2.fromOffset(length, stroke.size)
+	line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
+	line.BackgroundColor3 = stroke.erase and Color3.fromRGB(255, 255, 255)
+		or Color3.new(stroke.color.r, stroke.color.g, stroke.color.b)
+	line.BorderSizePixel = 0
+	line.ZIndex = 4
+	local lineCorner = Instance.new("UICorner")
+	lineCorner.CornerRadius = UDim.new(1, 0)
+	lineCorner.Parent = line
+	line.Parent = self.canvas
+	table.insert(self.objects, line)
+	stroke.fallbackObject = line
 end
 
 function CanvasController:clear()
 	for _, object in self.objects do object:Destroy() end
 	table.clear(self.objects)
 	table.clear(self.byId)
+	table.clear(self.strokes)
+	self:_clearEditableImage()
 end
 
 function CanvasController:undo(id)
-	local object = self.byId[id]
-	if object then
-		object:Destroy()
-		self.byId[id] = nil
-		for index, candidate in self.objects do
-			if candidate == object then table.remove(self.objects, index) break end
+	local stroke = self.byId[id]
+	if stroke then
+		if stroke.fallbackObject then
+			stroke.fallbackObject:Destroy()
 		end
+		self.byId[id] = nil
+		for index, candidate in self.strokes do
+			if candidate.id == id then
+				table.remove(self.strokes, index)
+				break
+			end
+		end
+		self:_rebuild()
 	end
 end
 
@@ -148,4 +282,3 @@ end
 
 CanvasController.COLORS = COLORS
 return CanvasController
-

@@ -7,6 +7,7 @@ end
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local StarterPlayer = game:GetService("StarterPlayer")
 
 local shared = ReplicatedStorage:FindFirstChild("ArtAcademy")
 check(shared ~= nil, "ReplicatedStorage.ArtAcademy exists")
@@ -89,5 +90,16 @@ for _, descendant in map:GetDescendants() do
 	end
 end
 check(npcCount == 4, "four interactive NPCs exist")
+
+local clientFolder = StarterPlayer.StarterPlayerScripts:FindFirstChild("ArtAcademyClient")
+check(clientFolder ~= nil, "client controller folder exists")
+local CanvasController = require(clientFolder.CanvasController)
+local testCanvas = Instance.new("Frame")
+testCanvas.Size = UDim2.fromOffset(900, 600)
+local canvasController = CanvasController.new(testCanvas, {})
+check(canvasController.editableImage ~= nil, "EditableImage renderer initializes")
+check(canvasController.imageLabel ~= nil, "EditableImage is bound to an ImageLabel")
+canvasController.editableImage:Destroy()
+testCanvas:Destroy()
 
 print("[SMOKE COMPLETE] Art Academy project structure and core modules validated")
