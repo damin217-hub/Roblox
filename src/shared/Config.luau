@@ -19,7 +19,7 @@ return table.freeze({
 	ALL_AGES_GRID = Vector2.new(24, 16),
 	GALLERY_MAX_STROKES = 400,
 	ADMIN_USER_IDS = {
-		-- 게시 전 운영자 Roblox UserId를 숫자로 추가하세요.
+		2934563959, -- rangs0524
 	},
 	MONETIZATION = {
 		-- Creator Dashboard에서 만든 ID로 교체하세요. 0은 비활성화 상태입니다.
