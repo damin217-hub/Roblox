@@ -88,6 +88,23 @@ local encoded = StrokeCodec.encode({ acceptedStamp }, 1)
 local decoded = StrokeCodec.decode(encoded)
 check(#encoded == 1 and #decoded == 1, "gallery stroke codec round-trips")
 check(decoded[1].kind == "stamp" and decoded[1].stampType == "square", "gallery codec preserves stamp metadata")
+local manyStrokes = {}
+for index = 1, 500 do
+	local clone = table.clone(acceptedStamp)
+	clone.id = index
+	table.insert(manyStrokes, clone)
+end
+check(#StrokeCodec.encode(manyStrokes, Config.GALLERY_MAX_STROKES) == 400, "gallery codec enforces bounded snapshot size")
+
+local floodArtist = { UserId = 202 }
+local acceptedFlood = 0
+for _ = 1, 20 do
+	local floodStamp = table.clone(stamp)
+	if CanvasService.submit(floodArtist, floodStamp, true, "ALL_AGES") then
+		acceptedFlood += 1
+	end
+end
+check(acceptedFlood <= Config.MAX_STAMPS_PER_SECOND, "all-ages stamp flood is rate limited")
 
 local questData = QuestService.getForData({
 	daily = { guesses = 3, rounds = 1 },
