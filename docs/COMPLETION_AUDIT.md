@@ -31,7 +31,7 @@ These items cannot be proven or completed without account-owned resources:
 - Create the All Ages and Free Draw 16+ Experiences in Creator Dashboard.
 - Supply both Universe IDs and Place IDs plus an Open Cloud key with `universe-places:write`.
 - Set content maturity and Free-form User Creation answers for each Experience.
-- Add real moderator UserIds and optional monetization product IDs.
+- Create optional monetization products and add their IDs; primary moderator `rangs0524` is configured.
 - Upload final icon and thumbnail files.
 - Run published DataStore QA and a real 8–12 player, 30-minute device test.
 - Create or identify the destination GitHub repository and push `main` and `develop`.

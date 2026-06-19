@@ -26,7 +26,7 @@ SHA-256: `94C5016F14605A36AD2AFECFDCACF6421615696D2B13BC56335F7CD4C944E4A1`
 
 ## Configuration required before publishing
 
-- Add real moderator UserIds to `Config.ADMIN_USER_IDS`.
+- Primary moderator `rangs0524` is configured in `Config.ADMIN_USER_IDS`.
 - Create optional cosmetic Game Pass/Developer Products and enter IDs in `Config.MONETIZATION`.
 - Complete the content maturity questionnaire separately for each Experience.
 - Keep both Experiences private until DataStore and multiplayer QA are complete.
