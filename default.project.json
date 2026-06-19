@@ -1,0 +1,25 @@
+{
+  "name": "ArtAcademyGuess",
+  "servePort": 34872,
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "ArtAcademy": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "ArtAcademyServer": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "ArtAcademyClient": {
+          "$path": "src/client"
+        }
+      }
+    }
+  }
+}
+

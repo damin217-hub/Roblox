@@ -1,0 +1,17 @@
+name: Validate Roblox project
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  rojo-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rojo-rbx/setup-rojo@v1
+        with:
+          version: 7.6.1
+      - run: rojo build all-ages.project.json -o /tmp/all-ages.rbxlx
+      - run: rojo build free-draw.project.json -o /tmp/free-draw.rbxlx
