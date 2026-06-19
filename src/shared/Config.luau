@@ -14,5 +14,7 @@ return table.freeze({
 	DATASTORE_NAME = "ArtAcademyPlayerData_v1",
 	GALLERY_DATASTORE_NAME = "ArtAcademyGallery_v1",
 	CANVAS_SIZE = Vector2.new(900, 600),
+	ADMIN_USER_IDS = {
+		-- 게시 전 운영자 Roblox UserId를 숫자로 추가하세요.
+	},
 })
-

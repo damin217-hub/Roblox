@@ -6,6 +6,7 @@ local PromptService = require(script.Parent.PromptService)
 local CanvasService = require(script.Parent.CanvasService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ModerationService = require(script.Parent.ModerationService)
+local GalleryService = require(script.Parent.GalleryService)
 
 local RoundService = {}
 local remotes
@@ -87,6 +88,7 @@ function RoundService.submitGuess(player: Player, correct: boolean)
 	scores[player] = (scores[player] or 0) + points
 	scores[artist] = (scores[artist] or 0) + 15
 	PlayerDataService.add(player, "correctGuesses", 1)
+	PlayerDataService.incrementDaily(player, "guesses", 1)
 	PlayerDataService.add(player, "xp", points)
 	PlayerDataService.add(player, "coins", math.floor(points / 5))
 	if position >= math.max(1, #Players:GetPlayers() - 1) then endDrawingEarly = true end
@@ -138,6 +140,8 @@ function RoundService.run()
 			state = "Drawing"
 			endDrawingEarly = false
 			PlayerDataService.add(artist, "drawings", 1)
+			PlayerDataService.incrementDaily(artist, "rounds", 1)
+			GalleryService.beginRound(roundId, artist, prompt)
 			countdown(Config.DRAWING_SECONDS, {
 				prompt = { ko = prompt.ko, en = prompt.en },
 			}, function() return endDrawingEarly or artist.Parent ~= Players end)
@@ -147,6 +151,7 @@ function RoundService.run()
 				prompt = { ko = prompt.ko, en = prompt.en },
 				strokeCount = CanvasService.getCount(),
 			})
+			GalleryService.submitPending(CanvasService.getSnapshot())
 		end
 
 		state = "Results"

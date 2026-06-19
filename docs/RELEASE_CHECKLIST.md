@@ -8,5 +8,7 @@
 - [ ] PC 및 Android/iOS 터치 테스트
 - [ ] 신고, 숨김, 건너뛰기 투표, 재접속 테스트
 - [ ] ASSET_REGISTER에 없는 외부 자산 제거
+- [ ] `Config.ADMIN_USER_IDS`에 실제 운영자 UserId 등록
+- [ ] 전체 연령판 서버 크기를 12명으로 설정
+- [ ] 16+판 Free-form User Creation 및 연령 제한 정확히 설정
 - [ ] 비공개 QA → 제한 공개 베타 → 전체 공개
-

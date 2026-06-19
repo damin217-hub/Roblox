@@ -9,6 +9,8 @@ local CanvasService = require(script.Services.CanvasService)
 local GuessService = require(script.Services.GuessService)
 local RoundService = require(script.Services.RoundService)
 local MapService = require(script.Services.MapService)
+local QuestService = require(script.Services.QuestService)
+local GalleryService = require(script.Services.GalleryService)
 
 local modeValue = ServerScriptService:FindFirstChild("ExperienceMode")
 local experienceMode = modeValue and modeValue.Value or "ALL_AGES"
@@ -37,13 +39,20 @@ for _, descendant in workspace.ArtAcademyMap:GetDescendants() do
 			if string.find(objectText, "모모") then
 				remotes.Toast:FireClient(player, "Choose, draw, guess, and earn coins! / 단어를 고르고 그림으로 맞혀보세요!")
 			elseif string.find(objectText, "상인") then
-				remotes.Toast:FireClient(player, "Cosmetic shop opens after the first public beta.")
+				remotes.OpenPanel:FireClient(player, "shop")
 			elseif string.find(objectText, "미션") then
 				local data = PlayerDataService.get(player)
-				local guesses = data and data.correctGuesses or 0
-				remotes.Toast:FireClient(player, string.format("Mission: 5 correct guesses (%d/5)", math.min(guesses, 5)))
+				if data then
+					remotes.QuestData:FireClient(player, QuestService.getForData(data))
+					remotes.OpenPanel:FireClient(player, "quests")
+				end
 			elseif string.find(objectText, "갤러리") then
-				remotes.Toast:FireClient(player, "Only moderator-approved drawings appear in the gallery.")
+				remotes.GalleryData:FireClient(player, {
+					approved = GalleryService.getApproved(),
+					pending = GalleryService.getPending(player),
+					isAdmin = GalleryService.isAdmin(player),
+				})
+				remotes.OpenPanel:FireClient(player, "gallery")
 			end
 		end)
 	end
@@ -121,6 +130,7 @@ remotes.ReportDrawing.OnServerEvent:Connect(function(player, reason)
 	local _, artist, _, roundId = RoundService.getState()
 	if ModerationService.allow(player, "report", 2, 30) then
 		ModerationService.report(player, artist, tostring(reason), roundId, CanvasService.getCount())
+		GalleryService.markReported()
 		remotes.Toast:FireClient(player, "Report received. The canvas is hidden for you.")
 	end
 end)
@@ -128,9 +138,78 @@ end)
 remotes.ReactToDrawing.OnServerEvent:Connect(function(player, reaction)
 	if ModerationService.allow(player, "reaction", 4, 5) then
 		local allowed = { heart = true, laugh = true, wow = true }
-		if allowed[reaction] then
+		if allowed[reaction] and GalleryService.react(player, reaction) then
 			remotes.Toast:FireAllClients(player.DisplayName .. " reacted: " .. reaction)
 		end
+	end
+end)
+
+remotes.PurchaseItem.OnServerEvent:Connect(function(player, itemId)
+	if not ModerationService.allow(player, "purchase", 4, 5) then
+		return
+	end
+	local ok, message = PlayerDataService.purchase(player, tostring(itemId))
+	remotes.Toast:FireClient(player, message)
+	if ok then
+		pushData(player)
+	end
+end)
+
+remotes.EquipItem.OnServerEvent:Connect(function(player, itemId)
+	if not ModerationService.allow(player, "equip", 6, 5) then
+		return
+	end
+	local ok, message = PlayerDataService.equip(player, tostring(itemId))
+	remotes.Toast:FireClient(player, message)
+	if ok then
+		pushData(player)
+	end
+end)
+
+remotes.RequestGallery.OnServerEvent:Connect(function(player, requestType, requestId)
+	if not ModerationService.allow(player, "panel_request", 4, 5) then
+		return
+	end
+	if requestType == "gallery" then
+		remotes.GalleryData:FireClient(player, {
+			approved = GalleryService.getApproved(),
+			pending = GalleryService.getPending(player),
+			isAdmin = GalleryService.isAdmin(player),
+		})
+	elseif requestType == "quests" then
+		local data = PlayerDataService.get(player)
+		if data then
+			local quest = QuestService.find(tostring(requestId))
+			if quest then
+				local ok, message = PlayerDataService.claimQuest(
+					player,
+					quest.id,
+					quest.requirement,
+					quest.field,
+					quest.reward
+				)
+				remotes.Toast:FireClient(player, message)
+				if ok then
+					pushData(player)
+				end
+			end
+			remotes.QuestData:FireClient(player, QuestService.getForData(data))
+		end
+	end
+end)
+
+remotes.ModerateGallery.OnServerEvent:Connect(function(player, artworkId, decision)
+	if not ModerationService.allow(player, "gallery_moderation", 5, 10) then
+		return
+	end
+	local ok, message = GalleryService.moderate(player, tostring(artworkId), tostring(decision))
+	remotes.Toast:FireClient(player, message)
+	if ok then
+		remotes.GalleryData:FireClient(player, {
+			approved = GalleryService.getApproved(),
+			pending = GalleryService.getPending(player),
+			isAdmin = true,
+		})
 	end
 end)
 

@@ -13,5 +13,11 @@ return table.freeze({
 	"CanvasCommand",
 	"Toast",
 	"PlayerData",
+	"OpenPanel",
+	"PurchaseItem",
+	"EquipItem",
+	"RequestGallery",
+	"GalleryData",
+	"QuestData",
+	"ModerateGallery",
 })
-

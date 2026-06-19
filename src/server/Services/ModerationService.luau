@@ -6,7 +6,20 @@ local ModerationService = {}
 local rateBuckets = {}
 local reports = {}
 local skipVotes = {}
-local reportStore = DataStoreService:GetDataStore("ArtAcademyModeration_v1")
+local reportStore = nil
+
+local function getReportStore()
+	if reportStore then
+		return reportStore
+	end
+	local ok, result = pcall(function()
+		return DataStoreService:GetDataStore("ArtAcademyModeration_v1")
+	end)
+	if ok then
+		reportStore = result
+	end
+	return reportStore
+end
 
 function ModerationService.allow(player: Player, action: string, limit: number, window: number): boolean
 	local now = os.clock()
@@ -36,8 +49,12 @@ function ModerationService.report(reporter: Player, artist: Player?, reason: str
 	if #reports > 200 then table.remove(reports, 1) end
 	task.spawn(function()
 		pcall(function()
+			local activeStore = getReportStore()
+			if not activeStore then
+				return
+			end
 			local key = string.format("report_%d_%d_%d", record.timestamp, reporter.UserId, math.random(1000, 9999))
-			reportStore:SetAsync(key, record)
+			activeStore:SetAsync(key, record)
 		end)
 	end)
 	return true
