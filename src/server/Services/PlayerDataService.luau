@@ -8,6 +8,7 @@ local PlayerDataService = {}
 local store = nil
 local sessions = {}
 local dirty = {}
+local pendingSaves = {}
 
 local function getStore()
 	if store then
@@ -232,21 +233,32 @@ end
 function PlayerDataService.save(player: Player)
 	local data = sessions[player]
 	if not data then return end
+	local userId = player.UserId
+	local persisted = PlayerDataService.saveByUserId(userId, data)
+	if persisted then
+		dirty[player] = nil
+	else
+		dirty[player] = true
+	end
+	return persisted
+end
+
+function PlayerDataService.saveByUserId(userId: number, data): boolean
 	local persisted = false
 	local ok = pcall(function()
 		local activeStore = getStore()
 		if not activeStore then
 			return
 		end
-		activeStore:UpdateAsync("player_" .. player.UserId, function()
+		activeStore:UpdateAsync("player_" .. userId, function()
 			return data
 		end)
 		persisted = true
 	end)
 	if ok and persisted then
-		dirty[player] = nil
+		pendingSaves[userId] = nil
 	else
-		dirty[player] = true
+		pendingSaves[userId] = data
 	end
 	return ok and persisted
 end
@@ -255,6 +267,20 @@ function PlayerDataService.remove(player: Player)
 	PlayerDataService.save(player)
 	sessions[player] = nil
 	dirty[player] = nil
+end
+
+function PlayerDataService.retryPending()
+	for userId, data in pendingSaves do
+		PlayerDataService.saveByUserId(userId, data)
+	end
+end
+
+function PlayerDataService.getPendingSaveCount(): number
+	local count = 0
+	for _ in pendingSaves do
+		count += 1
+	end
+	return count
 end
 
 function PlayerDataService.startAutosave()
@@ -266,6 +292,7 @@ function PlayerDataService.startAutosave()
 					PlayerDataService.save(player)
 				end
 			end
+			PlayerDataService.retryPending()
 		end
 	end)
 end

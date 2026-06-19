@@ -45,6 +45,7 @@ local MapService = require(services.MapService)
 local CanvasService = require(services.CanvasService)
 local QuestService = require(services.QuestService)
 local StrokeCodec = require(shared.StrokeCodec)
+local PlayerDataService = require(services.PlayerDataService)
 
 check(Config.ROUNDS_PER_MATCH == 5, "match contains five rounds")
 check(Config.DRAWING_SECONDS == 75, "drawing timer is 75 seconds")
@@ -97,6 +98,8 @@ local questData = QuestService.getForData({
 check(#questData == 4, "daily and weekly quest definitions load")
 check(questData[1].progress == 3, "daily quest progress is calculated")
 check(questData[3].scope == "weekly" and questData[3].progress == 10, "weekly quest progress is calculated")
+check(type(PlayerDataService.retryPending) == "function", "failed DataStore writes have a retry queue")
+check(type(PlayerDataService.getPendingSaveCount) == "function", "pending save queue is observable for shutdown flush")
 
 MapService.build()
 local map = workspace:FindFirstChild("ArtAcademyMap")

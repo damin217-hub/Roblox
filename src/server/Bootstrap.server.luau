@@ -250,5 +250,11 @@ game:BindToClose(function()
 	for _, player in Players:GetPlayers() do
 		PlayerDataService.save(player)
 	end
-	task.wait(2)
+	for _ = 1, 3 do
+		if PlayerDataService.getPendingSaveCount() == 0 then
+			break
+		end
+		task.wait(1)
+		PlayerDataService.retryPending()
+	end
 end)
