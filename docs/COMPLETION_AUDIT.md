@@ -7,7 +7,7 @@ Audit date: 2026-06-20
 | Requirement | Evidence |
 |---|---|
 | Two shared-code Experiences | `all-ages.project.json`, `free-draw.project.json`, both Rojo builds succeed |
-| 8–12 player party architecture | Server cap configuration, queue snapshot limited to 12, match portal opt-in |
+| 8–12 player party architecture | Full 12-player server-state scenario validates queue, roster, artist rotation, progress and result sync |
 | Five-round, 75-second loop | `match_scenario.luau` replays the complete lifecycle, validates five artist rotations, results, rewards and return to waiting |
 | Korean/English prompts and guesses | Bilingual prompt catalog and normalization assertions |
 | PC/mobile drawing UI | Mouse/touch input adapter plus Studio-built mobile/desktop layout assertions; physical device QA remains external |
@@ -24,7 +24,7 @@ Audit date: 2026-06-20
 | Persistence | DataStore sessions, autosave, receipt idempotency, disconnect retry queue, same-server unsaved reward recovery, shutdown flush |
 | Cosmetic monetization | Disabled-by-default Game Pass/Product hooks; no pay-to-win benefit |
 | Operations | Analytics events, moderation runbook, publishing copy, asset register and release checklist |
-| Build quality | Selene 0 errors/warnings; both Rojo builds; 70 Studio smoke, 28 server-bootstrap, 24 full-match and 15 departure-recovery checks per build |
+| Build quality | Selene 0 errors/warnings; both Rojo builds; 74 Studio smoke, 28 server-bootstrap, 33 full-match and 15 departure-recovery checks per build |
 
 ## Requires external Roblox/GitHub state
 

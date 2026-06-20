@@ -1,8 +1,12 @@
 # Release Manifest
 
-Release candidate generated from Git commit:
+Place builds generated from game-source commit:
 
 `6d7e491`
+
+Validation suite current through commit:
+
+`dfe5c08`
 
 ## Place builds
 
@@ -17,9 +21,9 @@ The release ZIP is intentionally not regenerated yet. Package generation remains
 
 - Selene: 0 errors, 0 warnings, 0 parse errors
 - Rojo: both place builds succeeded
-- Studio RunScript smoke test: 70 checks passed for each place
+- Studio RunScript smoke test: 74 checks passed for each place
 - Studio server bootstrap integration: 28 checks passed for each place
-- Full five-round match lifecycle: 24 checks passed for each place
+- Full 12-player, five-round match lifecycle: 33 checks passed for each place
 - Mid-match artist departure recovery: 15 checks passed for each place
 - Runtime module loading errors: 0
 
