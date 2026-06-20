@@ -22,7 +22,7 @@ Audit date: 2026-06-19
 | Persistence | DataStore sessions, autosave, receipt idempotency, disconnect retry queue, shutdown flush |
 | Cosmetic monetization | Disabled-by-default Game Pass/Product hooks; no pay-to-win benefit |
 | Operations | Analytics events, moderation runbook, publishing copy, asset register and release checklist |
-| Build quality | Selene 0 errors/warnings; both Rojo builds; 52 Studio smoke checks per build |
+| Build quality | Selene 0 errors/warnings; both Rojo builds; 52 Studio smoke and 28 server-bootstrap checks per build |
 
 ## Requires external Roblox/GitHub state
 

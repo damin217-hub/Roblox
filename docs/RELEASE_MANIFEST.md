@@ -2,26 +2,27 @@
 
 Release candidate generated from Git commit:
 
-`d2d3b4dd91a714fc2c18dd6f5b8de2c555c7e83e`
+`fd56d8b7899e9b7caf14b4e9e04d2d0cee50caab`
 
 ## Place builds
 
 | Experience | File | SHA-256 |
 |---|---|---|
-| All Ages | `build/ArtAcademy-AllAges.rbxlx` | `6EFDF5AF1D5E9E863F4146ED2C79AF962C247D321F18CA75F75C4DBC14E95524` |
-| Free Draw 16+ | `build/ArtAcademy-FreeDraw16Plus.rbxlx` | `EE7364EFD99262B114F8B92A856AA7FF4DC361CC254369DBB79743A21A7E4905` |
+| All Ages | `build/ArtAcademy-AllAges.rbxlx` | `5964B245A292DB7C8F8A8E1163CC137C5B02313B743D38D49CEF636FA511633A` |
+| Free Draw 16+ | `build/ArtAcademy-FreeDraw16Plus.rbxlx` | `B933717BF70D5A3E57D6AEC3BD7E449F8E829DD2295EDC389A1183A446C4B52A` |
 
 Release package:
 
 `build/ArtAcademy-ReleaseCandidate.zip`
 
-SHA-256: `C941207DED6572885482F63CF1EEDE198A2B83901A14F0F45148AB6F6A66E030`
+SHA-256: `5670A27FCEF06AC4B0D347F5FC28A0024AD04B275E4E95CC14E1CB745F6DDF4D`
 
 ## Verification
 
 - Selene: 0 errors, 0 warnings, 0 parse errors
 - Rojo: both place builds succeeded
 - Studio RunScript smoke test: 52 checks passed for each place
+- Studio server bootstrap integration: 28 checks passed for each place
 - Runtime module loading errors: 0
 
 ## Configuration required before publishing
