@@ -38,6 +38,13 @@ RobloxStudioBeta.exe --task RunScript `
 .\scripts\verify.ps1
 ```
 
+기본 명령은 Studio를 실행하지 않는 정적 검사와 두 빌드만 수행합니다. 숨김 Studio 프로세스를 사용하는
+전체 런타임 검사는 Studio 작업을 모두 닫은 뒤 명시적으로 실행합니다.
+
+```powershell
+.\scripts\verify.ps1 -RunStudio
+```
+
 ## Open Cloud 배포
 
 Creator Dashboard에서 두 개의 비공개 Experience와 `universe-places:write` 권한 API 키를 만든 뒤
