@@ -21,17 +21,47 @@ local drawingArtists = {}
 local sawResults = false
 local finalRanking = nil
 local returnedToWaiting = false
+local hiddenPromptDeliveries = 0
+local artistAlwaysReceivedPrompt = true
+local guesserNeverReceivedPrompt = true
+local artistAlwaysReceivedChoices = true
+local guesserNeverReceivedChoices = true
 
 local remotes = {
 	RoundState = {
 		FireAllClients = function(_, payload)
-			if payload.state == "Drawing" and payload.seconds == Config.DRAWING_SECONDS then
-				table.insert(drawingArtists, payload.artistUserId)
-			elseif payload.state == "Results" then
+			if payload.state == "Results" then
 				sawResults = true
 				finalRanking = payload.ranking
 			elseif sawResults and payload.state == "Waiting" then
 				returnedToWaiting = true
+			end
+		end,
+		FireClient = function(_, recipient, payload)
+			if payload.state == "Choosing" then
+				if recipient.UserId == payload.artistUserId then
+					if payload.choices == nil then
+						artistAlwaysReceivedChoices = false
+					end
+				elseif payload.choices ~= nil then
+					guesserNeverReceivedChoices = false
+				end
+				return
+			elseif payload.state ~= "Drawing" then
+				return
+			end
+			if recipient.UserId == payload.artistUserId then
+				if payload.prompt == nil then
+					artistAlwaysReceivedPrompt = false
+				end
+				if payload.seconds == Config.DRAWING_SECONDS then
+					table.insert(drawingArtists, payload.artistUserId)
+				end
+			else
+				if payload.prompt ~= nil then
+					guesserNeverReceivedPrompt = false
+				end
+				hiddenPromptDeliveries += 1
 			end
 		end,
 	},
@@ -62,6 +92,11 @@ check(RoundService.isReady(playerA) and RoundService.isReady(playerB), "queued p
 RoundService.run()
 
 check(#drawingArtists == Config.ROUNDS_PER_MATCH, "all five drawing rounds start")
+check(hiddenPromptDeliveries > 0, "drawing prompt privacy is exercised during the match")
+check(artistAlwaysReceivedPrompt, "artist receives the private drawing prompt")
+check(guesserNeverReceivedPrompt, "guesser never receives the private drawing prompt")
+check(artistAlwaysReceivedChoices, "artist receives private prompt choices")
+check(guesserNeverReceivedChoices, "guesser never receives prompt choices")
 for roundNumber, artistUserId in drawingArtists do
 	local expected = roundNumber % 2 == 1 and playerA.UserId or playerB.UserId
 	check(artistUserId == expected, "artist rotates correctly in round " .. roundNumber)

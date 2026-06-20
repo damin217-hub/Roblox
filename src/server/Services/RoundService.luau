@@ -86,7 +86,20 @@ local function broadcast(seconds: number, extra)
 	if extra then
 		for key, value in extra do payload[key] = value end
 	end
-	remotes.RoundState:FireAllClients(payload)
+	local privateField = state == "Choosing" and payload.choices and "choices"
+		or (state == "Drawing" and payload.prompt and "prompt")
+	if privateField then
+		local recipients = isFastStudioTest() and activeMatchPlayers() or Players:GetPlayers()
+		for _, recipient in recipients do
+			local clientPayload = table.clone(payload)
+			if recipient ~= artist then
+				clientPayload[privateField] = nil
+			end
+			remotes.RoundState:FireClient(recipient, clientPayload)
+		end
+	else
+		remotes.RoundState:FireAllClients(payload)
+	end
 end
 
 local function countdown(seconds: number, extra, breaker)
