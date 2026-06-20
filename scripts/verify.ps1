@@ -39,7 +39,7 @@ $targets = @(
 $launchedProcesses = @()
 
 if (-not $RunStudio) {
-    Write-Host "Static verification complete. Use -RunStudio to run the four hidden Studio checks."
+    Write-Host "Static verification complete. Use -RunStudio to run the six hidden Studio checks."
     return
 }
 
@@ -111,6 +111,42 @@ foreach ($target in $targets) {
     }
     if (-not $runtimeProcess.HasExited) {
         Stop-Process -Id $runtimeProcess.Id -Force
+    }
+
+    $scenarioOutput = "$root\build\scenario-$($target.Name).log"
+    Remove-Item $scenarioOutput -ErrorAction SilentlyContinue
+    $scenarioProcess = Start-Process -FilePath $studio.FullName -WindowStyle Hidden -PassThru -ArgumentList @(
+        "--task", "RunScript",
+        "--localPlaceFile", "`"$($target.Place)`"",
+        "--runScriptFile", "`"$root\tests\match_scenario.luau`"",
+        "--outputFile", "`"$scenarioOutput`"",
+        "--quitAfterExecution"
+    )
+    $launchedProcesses += $scenarioProcess
+    $scenarioComplete = $false
+    for ($attempt = 0; $attempt -lt 90; $attempt++) {
+        Start-Sleep -Seconds 1
+        if (Test-Path $scenarioOutput) {
+            $scenarioContent = Get-Content $scenarioOutput -Raw
+            $scenarioComplete = $scenarioContent -and [regex]::IsMatch($scenarioContent, "(?m)^\[SCENARIO COMPLETE\]")
+            if ($scenarioComplete) { break }
+        }
+    }
+    if (-not $scenarioComplete) { throw "$($target.Name) match scenario test did not complete." }
+    if (
+        [regex]::IsMatch($scenarioContent, "(?m)^Stack Begin$") -or
+        [regex]::IsMatch($scenarioContent, "(?m)^Requested module experienced") -or
+        [regex]::IsMatch($scenarioContent, "(?m)^\[FAIL\]")
+    ) {
+        throw "$($target.Name) match scenario test contains errors."
+    }
+    $scenarioPasses = ([regex]::Matches($scenarioContent, "(?m)^\[PASS\]")).Count
+    Write-Host "$($target.Name): $scenarioPasses full-match scenario checks passed."
+    if (-not $scenarioProcess.HasExited) {
+        $scenarioProcess.WaitForExit(15000) | Out-Null
+    }
+    if (-not $scenarioProcess.HasExited) {
+        Stop-Process -Id $scenarioProcess.Id -Force
     }
 }
 } finally {

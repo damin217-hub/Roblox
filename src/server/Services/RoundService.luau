@@ -24,6 +24,10 @@ local readyPlayers = {}
 local matchPlayers = {}
 local currentRound = 0
 
+local function isFastStudioTest(): boolean
+	return RunService:IsStudio() and game:GetAttribute("ArtAcademyFastScenarioTest") == true
+end
+
 local function isActive(player: Player): boolean
 	return table.find(matchPlayers, player) ~= nil and player.Parent == Players
 end
@@ -89,7 +93,9 @@ local function countdown(seconds: number, extra, breaker)
 	for remaining = seconds, 0, -1 do
 		broadcast(remaining, extra)
 		if breaker and breaker() then break end
-		task.wait(1)
+		if not isFastStudioTest() then
+			task.wait(1)
+		end
 	end
 end
 
@@ -97,6 +103,15 @@ local function chooseArtist(roundNumber: number)
 	local players = activeMatchPlayers()
 	if #players == 0 then return nil end
 	return players[((roundNumber - 1) % #players) + 1]
+end
+
+local function findActivePlayerByUserId(userId: number)
+	for _, player in activeMatchPlayers() do
+		if player.UserId == userId then
+			return player
+		end
+	end
+	return nil
 end
 
 function RoundService.toggleReady(player: Player): boolean
@@ -233,7 +248,7 @@ function RoundService.run()
 		local ranking = roster()
 		local winnerBonus = 0
 		if ranking[1] then
-			local winner = Players:GetPlayerByUserId(ranking[1].userId)
+			local winner = findActivePlayerByUserId(ranking[1].userId)
 			if winner then
 				winnerBonus = 50
 				PlayerDataService.add(winner, "wins", 1)
@@ -246,7 +261,16 @@ function RoundService.run()
 			winnerBonus = winnerBonus,
 		})
 		TelemetryService.logMany(activeMatchPlayers(), "match_completed", #ranking, { mode = mode })
+		for _, participant in matchPlayers do
+			readyPlayers[participant] = nil
+		end
 		table.clear(matchPlayers)
+		if isFastStudioTest() and game:GetAttribute("ArtAcademySingleMatchTest") == true then
+			state = "Waiting"
+			currentRound = 0
+			broadcast(0, { needed = requiredPlayers, readyCount = 0 })
+			return
+		end
 	end
 end
 

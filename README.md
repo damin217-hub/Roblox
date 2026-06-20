@@ -39,7 +39,8 @@ RobloxStudioBeta.exe --task RunScript `
 ```
 
 기본 명령은 Studio를 실행하지 않는 정적 검사와 두 빌드만 수행합니다. 숨김 Studio 프로세스를 사용하는
-전체 런타임 검사는 Studio 작업을 모두 닫은 뒤 명시적으로 실행합니다.
+전체 런타임 검사는 Studio 작업을 모두 닫은 뒤 명시적으로 실행합니다. 각 Experience마다 구조 스모크,
+서버 부팅, 5라운드 전체 매치 시나리오를 검증합니다.
 
 ```powershell
 .\scripts\verify.ps1 -RunStudio
