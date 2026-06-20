@@ -14,9 +14,8 @@ jobs:
         run: cargo install selene --version 0.31.0 --locked
       - name: Lint Luau
         run: selene src tests
-      - uses: rojo-rbx/setup-rojo@v1
-        with:
-          version: 7.6.1
+      - name: Install Rojo
+        run: cargo install rojo --version 7.6.1 --locked
       - name: Build All Ages place
         run: rojo build all-ages.project.json -o /tmp/all-ages.rbxlx
       - name: Build Free Draw 16+ place
