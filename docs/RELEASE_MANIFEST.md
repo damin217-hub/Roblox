@@ -2,14 +2,14 @@
 
 Release candidate generated from Git commit:
 
-`f1c51ff19aa26b7a7b16cfb9f160126cc73e379c`
+`3b44aa4be9fb0a9704771e2b88288b0726ccf6ac`
 
 ## Place builds
 
 | Experience | File | SHA-256 |
 |---|---|---|
-| All Ages | `build/ArtAcademy-AllAges.rbxlx` | `9FDB58723AB20F1618CA4872B36BAD50D0DFCB52FC82A66B32B87287D0C40271` |
-| Free Draw 16+ | `build/ArtAcademy-FreeDraw16Plus.rbxlx` | `827DE596D3E463E3474D31EAF89A0B39AF4BF423C1D013823A4734A81A6C3063` |
+| All Ages | `build/ArtAcademy-AllAges.rbxlx` | `880EE9473C5BA6FE6CE68CA3FC301B81832611BBA729A27AEFA4D08B88E747CC` |
+| Free Draw 16+ | `build/ArtAcademy-FreeDraw16Plus.rbxlx` | `8BADDA2DEF4B66B22C2F25172864FBCC65FE61CE0E8F4AD3FC78004ED7C4E06D` |
 
 The release ZIP is intentionally not regenerated yet. Package generation remains gated on interactive Studio, mobile and multiplayer QA.
 
