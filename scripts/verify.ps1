@@ -37,6 +37,13 @@ $targets = @(
 )
 
 $launchedProcesses = @()
+$baselineStudioProcessIds = @()
+if ($RunStudio) {
+    $baselineStudioProcessIds = @(
+        Get-Process RobloxStudioBeta -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty Id
+    )
+}
 
 if (-not $RunStudio) {
     Write-Host "Static verification complete. Use -RunStudio to run the six hidden Studio checks."
@@ -155,6 +162,9 @@ foreach ($target in $targets) {
             Stop-Process -Id $launchedProcess.Id -Force -ErrorAction SilentlyContinue
         }
     }
+    Get-Process RobloxStudioBeta -ErrorAction SilentlyContinue |
+        Where-Object { $baselineStudioProcessIds -notcontains $_.Id } |
+        Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host "Verification complete."
