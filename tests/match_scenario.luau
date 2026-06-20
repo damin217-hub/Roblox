@@ -26,6 +26,7 @@ local artistAlwaysReceivedPrompt = true
 local guesserNeverReceivedPrompt = true
 local artistAlwaysReceivedChoices = true
 local guesserNeverReceivedChoices = true
+local playerDataSyncs = {}
 
 local remotes = {
 	RoundState = {
@@ -67,6 +68,11 @@ local remotes = {
 	},
 	CanvasCommand = {
 		FireAllClients = function() end,
+	},
+	PlayerData = {
+		FireClient = function(_, recipient, data)
+			playerDataSyncs[recipient.UserId] = data.coins
+		end,
 	},
 }
 
@@ -113,6 +119,8 @@ check(dataA.daily.rounds == 5 and dataB.daily.rounds == 5, "all participants rec
 check(dataA.drawings + dataB.drawings == 5, "exactly five artist drawing records are awarded")
 check(dataA.wins + dataB.wins == 1, "exactly one match win is awarded")
 check(dataA.coins + dataB.coins == 50, "winner bonus is awarded exactly once")
+check(playerDataSyncs[playerA.UserId] ~= nil and playerDataSyncs[playerB.UserId] ~= nil, "final player data sync reaches every participant")
+check(playerDataSyncs[playerA.UserId] + playerDataSyncs[playerB.UserId] == 50, "synced balances include the winner bonus")
 
 game:SetAttribute("ArtAcademyFastScenarioTest", nil)
 game:SetAttribute("ArtAcademySingleMatchTest", nil)

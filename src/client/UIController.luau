@@ -60,6 +60,7 @@ function UIController.new(remotes)
 	self.colorButtons = {}
 	self.galleryCanvasController = nil
 	self.hasShownTutorial = false
+	self.lastRoundId = ""
 	self.sounds = SoundController.new()
 	return self
 end
@@ -211,10 +212,11 @@ function UIController:build()
 	send.MouseButton1Click:Connect(submit)
 	self.guessBox.FocusLost:Connect(function(enter) if enter then submit() end end)
 
-	local hide = button(side, self.strings.hide, UDim2.new(0.48, -5, 0, 42), UDim2.new(0, 10, 0.79, 0), Color3.fromRGB(93, 100, 120))
-	hide.MouseButton1Click:Connect(function()
+	self.hideButton = button(side, self.strings.hide, UDim2.new(0.48, -5, 0, 42), UDim2.new(0, 10, 0.79, 0), Color3.fromRGB(93, 100, 120))
+	self.hideButton.MouseButton1Click:Connect(function()
 		self.hidden = not self.hidden
 		self.canvas.Visible = not self.hidden
+		self.hideButton.Text = self.hidden and "Show / 다시 보기" or self.strings.hide
 	end)
 	local skip = button(side, self.strings.skip, UDim2.new(0.48, -5, 0, 42), UDim2.new(0.52, 0, 0.79, 0), Color3.fromRGB(255, 156, 56))
 	skip.MouseButton1Click:Connect(function() self.remotes.VoteSkip:FireServer() end)
@@ -233,10 +235,11 @@ function UIController:build()
 		self.remotes.ReportDrawing:FireServer("inappropriate")
 		self.hidden = true
 		self.canvas.Visible = false
+		self.hideButton.Text = "Show / 다시 보기"
 	end)
 
 	self.choiceFrame = Instance.new("Frame")
-	self.choiceFrame.Size = UDim2.new(0, 520, 0, 210)
+	self.choiceFrame.Size = UDim2.new(0.8, 0, 0, 210)
 	self.choiceFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 	self.choiceFrame.Position = UDim2.fromScale(0.5, 0.48)
 	self.choiceFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -244,6 +247,10 @@ function UIController:build()
 	self.choiceFrame.ZIndex = 20
 	self.choiceFrame.Parent = gui
 	corner(self.choiceFrame, 20)
+	local choiceSizeConstraint = Instance.new("UISizeConstraint")
+	choiceSizeConstraint.MinSize = Vector2.new(300, 210)
+	choiceSizeConstraint.MaxSize = Vector2.new(560, 210)
+	choiceSizeConstraint.Parent = self.choiceFrame
 	text(self.choiceFrame, "Choose a prompt / 단어 선택", UDim2.new(1, 0, 0, 55), UDim2.fromOffset(0, 8), 22, true).ZIndex = 21
 
 	self.toast = text(gui, "", UDim2.fromOffset(420, 50), UDim2.new(0.5, -210, 0, 90), 18, true)
@@ -295,6 +302,14 @@ function UIController:build()
 			top.Size = UDim2.new(1, -16, 0, 62)
 			top.Position = UDim2.fromOffset(8, 6)
 			self.title.Visible = false
+			self.status.Size = UDim2.new(0.48, -12, 1, 0)
+			self.status.Position = UDim2.fromOffset(12, 0)
+			self.roundBadge.Size = UDim2.new(0.18, 0, 1, 0)
+			self.roundBadge.Position = UDim2.new(0.48, 0, 0, 0)
+			self.timer.Size = UDim2.new(0.15, 0, 1, 0)
+			self.timer.Position = UDim2.new(0.66, 0, 0, 0)
+			self.currency.Size = UDim2.new(0.19, -8, 1, 0)
+			self.currency.Position = UDim2.new(0.81, 0, 0, 0)
 			main.Size = UDim2.new(1, -16, 0.6, -42)
 			main.Position = UDim2.fromOffset(8, 76)
 			side.Size = UDim2.new(1, -16, 0.4, -42)
@@ -302,6 +317,14 @@ function UIController:build()
 			self.modal.Size = UDim2.new(0.94, 0, 0.82, 0)
 		else
 			self.title.Visible = true
+			self.status.Size = UDim2.new(0.3, 0, 1, 0)
+			self.status.Position = UDim2.new(0.34, 0, 0, 0)
+			self.roundBadge.Size = UDim2.new(0.12, 0, 1, 0)
+			self.roundBadge.Position = UDim2.new(0.64, 0, 0, 0)
+			self.timer.Size = UDim2.new(0.12, 0, 1, 0)
+			self.timer.Position = UDim2.new(0.76, 0, 0, 0)
+			self.currency.Size = UDim2.new(0.12, -10, 1, 0)
+			self.currency.Position = UDim2.new(0.88, 0, 0, 0)
 			top.Size = UDim2.new(1, -24, 0, 76)
 			top.Position = UDim2.fromOffset(12, 10)
 			main.Size = UDim2.new(0.72, -18, 1, -110)
@@ -573,7 +596,12 @@ function UIController:_showChoices(choices)
 		if child:IsA("TextButton") then child:Destroy() end
 	end
 	for index, choice in choices do
-		local item = button(self.choiceFrame, choice.ko .. "\n" .. choice.en, UDim2.fromOffset(145, 100), UDim2.fromOffset(32 + (index - 1) * 160, 82))
+		local item = button(
+			self.choiceFrame,
+			choice.ko .. "\n" .. choice.en,
+			UDim2.new(0.28, 0, 0, 100),
+			UDim2.new(0.04 + (index - 1) * 0.32, 0, 0, 82)
+		)
 		item.ZIndex = 21
 		item.MouseButton1Click:Connect(function()
 			self.remotes.ChoosePrompt:FireServer(choice.id)
@@ -585,6 +613,12 @@ end
 
 function UIController:onState(payload)
 	local previousState = self.lastState and self.lastState.state or nil
+	if payload.roundId ~= "" and payload.roundId ~= self.lastRoundId then
+		self.lastRoundId = payload.roundId
+		self.hidden = false
+		self.canvas.Visible = true
+		self.hideButton.Text = self.strings.hide
+	end
 	self.lastState = payload
 	if previousState and previousState ~= payload.state then
 		self.sounds:play("round")

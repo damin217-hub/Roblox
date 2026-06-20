@@ -19,7 +19,7 @@ The release ZIP is intentionally not regenerated yet. Package generation remains
 - Rojo: both place builds succeeded
 - Studio RunScript smoke test: 55 checks passed for each place
 - Studio server bootstrap integration: 28 checks passed for each place
-- Full five-round match lifecycle: 22 checks passed for each place
+- Full five-round match lifecycle: 24 checks passed for each place
 - Runtime module loading errors: 0
 
 ## Configuration required before publishing

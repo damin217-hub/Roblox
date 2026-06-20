@@ -269,6 +269,12 @@ function RoundService.run()
 				PlayerDataService.add(winner, "coins", winnerBonus)
 			end
 		end
+		for _, participant in activeMatchPlayers() do
+			local data = PlayerDataService.get(participant)
+			if data then
+				remotes.PlayerData:FireClient(participant, data)
+			end
+		end
 		countdown(Config.RESULTS_SECONDS, {
 			ranking = ranking,
 			winnerBonus = winnerBonus,

@@ -11,6 +11,7 @@ Audit date: 2026-06-20
 | Five-round, 75-second loop | `match_scenario.luau` replays the complete lifecycle, validates five artist rotations, results, rewards and return to waiting |
 | Korean/English prompts and guesses | Bilingual prompt catalog and normalization assertions |
 | PC/mobile drawing UI | Mouse/touch input adapter and responsive layout |
+| Match UX recovery | Result-time balance sync, reported canvas resets on the next round, responsive prompt choices |
 | All Ages constrained creation | Tap-only circle/square stamps, approved palette, 24×16 server grid, 240-stamp cap |
 | 16+ free drawing | EditableImage brush renderer, size, colors, erase, undo and clear |
 | Server authority and abuse controls | Artist checks, bounds validation, event rate limits, max stroke/stamp limits |
@@ -23,7 +24,7 @@ Audit date: 2026-06-20
 | Persistence | DataStore sessions, autosave, receipt idempotency, disconnect retry queue, shutdown flush |
 | Cosmetic monetization | Disabled-by-default Game Pass/Product hooks; no pay-to-win benefit |
 | Operations | Analytics events, moderation runbook, publishing copy, asset register and release checklist |
-| Build quality | Selene 0 errors/warnings; both Rojo builds; 55 Studio smoke, 28 server-bootstrap and 22 full-match checks per build |
+| Build quality | Selene 0 errors/warnings; both Rojo builds; 55 Studio smoke, 28 server-bootstrap and 24 full-match checks per build |
 
 ## Requires external Roblox/GitHub state
 
