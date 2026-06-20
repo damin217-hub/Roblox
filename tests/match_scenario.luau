@@ -11,6 +11,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 game:SetAttribute("ArtAcademyFastScenarioTest", true)
 game:SetAttribute("ArtAcademySingleMatchTest", true)
+game:SetAttribute("ArtAcademyRequiredPlayersTest", 12)
 
 local Config = require(ReplicatedStorage.ArtAcademy.Config)
 local services = ServerScriptService.ArtAcademyServer.Services
@@ -76,24 +77,18 @@ local remotes = {
 	},
 }
 
-local playerA = {
-	UserId = 91001,
-	DisplayName = "ScenarioArtistA",
-	Parent = Players,
-}
-local playerB = {
-	UserId = 91002,
-	DisplayName = "ScenarioArtistB",
-	Parent = Players,
-}
-
-PlayerDataService.load(playerA)
-PlayerDataService.load(playerB)
+local scenarioPlayers = {}
+for index = 1, Config.MAX_PLAYERS do
+	local player = {
+		UserId = 91000 + index,
+		DisplayName = "ScenarioPlayer" .. index,
+		Parent = Players,
+	}
+	table.insert(scenarioPlayers, player)
+	PlayerDataService.load(player)
+	check(RoundService.toggleReady(player), "player " .. index .. " joins the 12-player queue")
+end
 RoundService.init(remotes, "ALL_AGES")
-
-check(RoundService.toggleReady(playerA), "first player joins the queue")
-check(RoundService.toggleReady(playerB), "second player joins the queue")
-check(RoundService.isReady(playerA) and RoundService.isReady(playerB), "queued players are marked ready")
 
 RoundService.run()
 
@@ -104,24 +99,44 @@ check(guesserNeverReceivedPrompt, "guesser never receives the private drawing pr
 check(artistAlwaysReceivedChoices, "artist receives private prompt choices")
 check(guesserNeverReceivedChoices, "guesser never receives prompt choices")
 for roundNumber, artistUserId in drawingArtists do
-	local expected = roundNumber % 2 == 1 and playerA.UserId or playerB.UserId
+	local expected = scenarioPlayers[roundNumber].UserId
 	check(artistUserId == expected, "artist rotates correctly in round " .. roundNumber)
 end
 
 check(sawResults, "match reaches the final results state")
-check(type(finalRanking) == "table" and #finalRanking == 2, "results contain the full match ranking")
+check(type(finalRanking) == "table" and #finalRanking == Config.MAX_PLAYERS, "results contain all 12 participants")
 check(returnedToWaiting, "match returns to waiting after results")
-check(not RoundService.isReady(playerA) and not RoundService.isReady(playerB), "players must opt in again for a replay")
 
-local dataA = PlayerDataService.get(playerA)
-local dataB = PlayerDataService.get(playerB)
-check(dataA.daily.rounds == 5 and dataB.daily.rounds == 5, "all participants receive five rounds of quest progress")
-check(dataA.drawings + dataB.drawings == 5, "exactly five artist drawing records are awarded")
-check(dataA.wins + dataB.wins == 1, "exactly one match win is awarded")
-check(dataA.coins + dataB.coins == 50, "winner bonus is awarded exactly once")
-check(playerDataSyncs[playerA.UserId] ~= nil and playerDataSyncs[playerB.UserId] ~= nil, "final player data sync reaches every participant")
-check(playerDataSyncs[playerA.UserId] + playerDataSyncs[playerB.UserId] == 50, "synced balances include the winner bonus")
+local totalRounds = 0
+local totalDrawings = 0
+local totalWins = 0
+local totalCoins = 0
+local syncedPlayers = 0
+local allReadyCleared = true
+for _, player in scenarioPlayers do
+	local data = PlayerDataService.get(player)
+	totalRounds += data.daily.rounds
+	totalDrawings += data.drawings
+	totalWins += data.wins
+	totalCoins += data.coins
+	if playerDataSyncs[player.UserId] ~= nil then
+		syncedPlayers += 1
+	end
+	if RoundService.isReady(player) then
+		allReadyCleared = false
+	end
+end
+check(allReadyCleared, "all 12 players must opt in again for a replay")
+check(totalRounds == Config.MAX_PLAYERS * Config.ROUNDS_PER_MATCH, "all 12 participants receive five rounds of quest progress")
+check(totalDrawings == Config.ROUNDS_PER_MATCH, "exactly five artist drawing records are awarded")
+check(totalWins == 1, "exactly one match win is awarded")
+check(totalCoins == 50, "winner bonus is awarded exactly once")
+check(syncedPlayers == Config.MAX_PLAYERS, "final player data sync reaches all 12 participants")
+local syncedCoinTotal = 0
+for _, coins in playerDataSyncs do syncedCoinTotal += coins end
+check(syncedCoinTotal == 50, "synced balances include the winner bonus")
 
 game:SetAttribute("ArtAcademyFastScenarioTest", nil)
 game:SetAttribute("ArtAcademySingleMatchTest", nil)
+game:SetAttribute("ArtAcademyRequiredPlayersTest", nil)
 print("[SCENARIO COMPLETE] Full five-round match lifecycle validated")
