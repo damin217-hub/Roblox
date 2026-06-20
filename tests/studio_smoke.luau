@@ -122,6 +122,9 @@ MapService.build()
 local map = workspace:FindFirstChild("ArtAcademyMap")
 check(map ~= nil, "Art Academy map builds")
 check(map:FindFirstChild("MatchPortal") ~= nil, "match portal exists")
+check(map:FindFirstChild("WelcomeArchTop") ~= nil, "academy entrance arch guides new players")
+check(map:FindFirstChild("WelcomePath") ~= nil, "spawn path guides players to the match portal")
+check(map:FindFirstChild("TutorialZone") ~= nil, "tutorial station has a distinct visual zone")
 
 local npcCount = 0
 for _, descendant in map:GetDescendants() do

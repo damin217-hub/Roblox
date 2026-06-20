@@ -50,7 +50,7 @@ for _, descendant in workspace.ArtAcademyMap:GetDescendants() do
 						or "Left the match queue. / 참가 취소"
 				)
 			elseif string.find(objectText, "모모") then
-				remotes.Toast:FireClient(player, "Choose, draw, guess, and earn coins! / 단어를 고르고 그림으로 맞혀보세요!")
+				remotes.OpenPanel:FireClient(player, "tutorial")
 			elseif string.find(objectText, "상인") then
 				remotes.OpenPanel:FireClient(player, "shop")
 			elseif string.find(objectText, "미션") then
@@ -205,6 +205,8 @@ remotes.RequestGallery.OnServerEvent:Connect(function(player, requestType, reque
 			pending = GalleryService.getPending(player),
 			isAdmin = GalleryService.isAdmin(player),
 		})
+	elseif requestType == "playerData" then
+		pushData(player)
 	elseif requestType == "quests" then
 		local data = PlayerDataService.get(player)
 		if data then

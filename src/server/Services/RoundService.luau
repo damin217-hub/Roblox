@@ -22,6 +22,7 @@ local scores = {}
 local endDrawingEarly = false
 local readyPlayers = {}
 local matchPlayers = {}
+local currentRound = 0
 
 local function isActive(player: Player): boolean
 	return table.find(matchPlayers, player) ~= nil and player.Parent == Players
@@ -75,6 +76,8 @@ local function broadcast(seconds: number, extra)
 		roundId = roundId,
 		mode = mode,
 		scores = roster(),
+		roundNumber = currentRound,
+		totalRounds = Config.ROUNDS_PER_MATCH,
 	}
 	if extra then
 		for key, value in extra do payload[key] = value end
@@ -169,6 +172,7 @@ end
 function RoundService.run()
 	while true do
 		state = "Waiting"
+		currentRound = 0
 		local requiredPlayers = RunService:IsStudio() and 1 or Config.MIN_PLAYERS
 		while #readyList() < requiredPlayers do
 			local readyCount = #readyList()
@@ -188,6 +192,7 @@ function RoundService.run()
 
 		for roundNumber = 1, Config.ROUNDS_PER_MATCH do
 			if #activeMatchPlayers() < requiredPlayers then break end
+			currentRound = roundNumber
 			artist = chooseArtist(roundNumber)
 			roundId = string.format("%d-%d-%d", os.time(), roundNumber, math.random(1000, 9999))
 			choices = PromptService.getChoices(3)
@@ -226,15 +231,20 @@ function RoundService.run()
 
 		state = "Results"
 		local ranking = roster()
+		local winnerBonus = 0
 		if ranking[1] then
 			local winner = Players:GetPlayerByUserId(ranking[1].userId)
 			if winner then
+				winnerBonus = 50
 				PlayerDataService.add(winner, "wins", 1)
 				PlayerDataService.incrementProgress(winner, "wins", 1)
-				PlayerDataService.add(winner, "coins", 50)
+				PlayerDataService.add(winner, "coins", winnerBonus)
 			end
 		end
-		countdown(Config.RESULTS_SECONDS, { ranking = ranking })
+		countdown(Config.RESULTS_SECONDS, {
+			ranking = ranking,
+			winnerBonus = winnerBonus,
+		})
 		TelemetryService.logMany(activeMatchPlayers(), "match_completed", #ranking, { mode = mode })
 		table.clear(matchPlayers)
 	end

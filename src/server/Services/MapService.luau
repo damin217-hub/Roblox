@@ -33,6 +33,20 @@ local function label(partInstance, text, color)
 	title.Parent = gui
 end
 
+local function floorSign(parent, name, position, color, titleText)
+	local pad = part(
+		parent,
+		name,
+		Vector3.new(12, 0.35, 8),
+		CFrame.new(position),
+		color,
+		Enum.Material.SmoothPlastic
+	)
+	pad.Transparency = 0.08
+	label(pad, titleText, Color3.new(1, 1, 1))
+	return pad
+end
+
 local function npc(parent, name, position, color, actionText)
 	local model = Instance.new("Model")
 	model.Name = name
@@ -40,6 +54,9 @@ local function npc(parent, name, position, color, actionText)
 	local body = part(model, "Body", Vector3.new(3, 4, 2), CFrame.new(position + Vector3.new(0, 2, 0)), color)
 	local head = part(model, "Head", Vector3.new(2.4, 2.4, 2.4), CFrame.new(position + Vector3.new(0, 5, 0)), Color3.fromRGB(255, 220, 184))
 	head.Shape = Enum.PartType.Ball
+	local hat = part(model, "Beret", Vector3.new(2.7, 0.55, 2.7), CFrame.new(position + Vector3.new(0, 6.15, 0)), color)
+	hat.Shape = Enum.PartType.Cylinder
+	hat.Orientation = Vector3.new(0, 0, 90)
 	label(head, name, Color3.new(1, 1, 1))
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = actionText
@@ -81,6 +98,12 @@ function MapService.build()
 	map.Parent = workspace
 	part(map, "Floor", Vector3.new(120, 2, 120), CFrame.new(0, -1, 0), Color3.fromRGB(245, 238, 220), Enum.Material.Sand)
 	part(map, "Academy", Vector3.new(62, 1, 62), CFrame.new(0, 0.1, 0), Color3.fromRGB(255, 253, 246), Enum.Material.Marble)
+	part(map, "WelcomePath", Vector3.new(8, 0.18, 21), CFrame.new(0, 0.72, 16), Color3.fromRGB(218, 207, 255), Enum.Material.SmoothPlastic)
+
+	local welcomeArchTop = part(map, "WelcomeArchTop", Vector3.new(20, 2, 2), CFrame.new(0, 10, 27), Color3.fromRGB(112, 83, 245), Enum.Material.SmoothPlastic)
+	label(welcomeArchTop, "MOMO'S ART ACADEMY  •  모모의 아트 아카데미", Color3.new(1, 1, 1))
+	part(map, "WelcomeArchLeft", Vector3.new(2, 10, 2), CFrame.new(-9, 5, 27), Color3.fromRGB(112, 83, 245), Enum.Material.SmoothPlastic)
+	part(map, "WelcomeArchRight", Vector3.new(2, 10, 2), CFrame.new(9, 5, 27), Color3.fromRGB(112, 83, 245), Enum.Material.SmoothPlastic)
 
 	for i = 1, 16 do
 		local angle = math.rad((i - 1) * 22.5)
@@ -99,6 +122,11 @@ function MapService.build()
 	matchPrompt.HoldDuration = 0
 	matchPrompt.MaxActivationDistance = 12
 	matchPrompt.Parent = center
+
+	floorSign(map, "TutorialZone", Vector3.new(-18, 0.75, -8), Color3.fromRGB(255, 164, 179), "1  TUTORIAL / 튜토리얼")
+	floorSign(map, "ShopZone", Vector3.new(18, 0.75, -8), Color3.fromRGB(150, 215, 255), "SHOP / 상점")
+	floorSign(map, "MissionZone", Vector3.new(-18, 0.75, 14), Color3.fromRGB(166, 226, 168), "MISSIONS / 미션")
+	floorSign(map, "GalleryZone", Vector3.new(18, 0.75, 14), Color3.fromRGB(211, 172, 255), "GALLERY / 갤러리")
 
 	npc(map, "큐레이터 모모 / Curator Momo", Vector3.new(-18, 1, -8), Color3.fromRGB(255, 116, 139), "튜토리얼 / Tutorial")
 	npc(map, "팔레트 상인 / Palette Merchant", Vector3.new(18, 1, -8), Color3.fromRGB(104, 190, 255), "상점 / Shop")

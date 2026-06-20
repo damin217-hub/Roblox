@@ -59,6 +59,7 @@ function UIController.new(remotes)
 	self.galleryData = { approved = {}, pending = {}, isAdmin = false }
 	self.colorButtons = {}
 	self.galleryCanvasController = nil
+	self.hasShownTutorial = false
 	self.sounds = SoundController.new()
 	return self
 end
@@ -84,7 +85,9 @@ function UIController:build()
 	top.Parent = gui
 	corner(top, 18)
 	self.title = text(top, self.strings.title, UDim2.new(0.35, 0, 1, 0), UDim2.fromOffset(20, 0), 24, true)
-	self.status = text(top, self.strings.waiting, UDim2.new(0.4, 0, 1, 0), UDim2.new(0.34, 0, 0, 0), 20, true)
+	self.status = text(top, self.strings.waiting, UDim2.new(0.3, 0, 1, 0), UDim2.new(0.34, 0, 0, 0), 20, true)
+	self.roundBadge = text(top, "", UDim2.new(0.12, 0, 1, 0), UDim2.new(0.64, 0, 0, 0), 15, true)
+	self.roundBadge.TextColor3 = Color3.fromRGB(112, 83, 245)
 	self.timer = text(top, "--", UDim2.new(0.12, 0, 1, 0), UDim2.new(0.76, 0, 0, 0), 30, true)
 	self.currency = text(top, "0 coins", UDim2.new(0.12, -10, 1, 0), UDim2.new(0.88, 0, 0, 0), 16, true)
 
@@ -314,6 +317,70 @@ function UIController:build()
 	end
 end
 
+function UIController:_openTutorial()
+	self:_clearModal()
+	self.modalTitle.Text = self.strings.tutorialTitle .. " / Momo's First Lesson"
+	self:_modalRow(
+		"1. 중앙 포털에서 참가 / Join at the center portal",
+		"보라색 PLAY 포털에서 E 또는 탭으로 다음 게임 대기열에 참가합니다.",
+		nil,
+		nil
+	)
+	self:_modalRow(
+		"2. 출제자는 단어를 선택 / Artist chooses a prompt",
+		"세 단어 중 하나를 고르고 제한 시간 안에 그림으로 표현하세요.",
+		nil,
+		nil
+	)
+	self:_modalRow(
+		"3. 다른 플레이어는 정답 추측 / Everyone else guesses",
+		"필터링된 입력창에 정답을 적으세요. 빠를수록 더 높은 점수를 얻습니다.",
+		nil,
+		nil
+	)
+	self:_modalRow(
+		"4. 5라운드 후 보상 / Rewards after 5 rounds",
+		"코인으로 팔레트와 브러시 외형을 꾸미고, 미션과 갤러리도 확인하세요.",
+		"수업 시작 / Got it",
+		function()
+			self.modal.Visible = false
+			self.toast.Text = "중앙의 보라색 PLAY 포털로 이동하세요! / Head to the purple PLAY portal!"
+			self.toast.Visible = true
+			task.delay(4, function()
+				self.toast.Visible = false
+			end)
+		end
+	)
+	self.modal.Visible = true
+end
+
+function UIController:_openResults(payload)
+	self:_clearModal()
+	self.modalTitle.Text = self.strings.results .. " / Final Results"
+	local ranking = payload.ranking or payload.scores or {}
+	if #ranking == 0 then
+		self:_modalRow("게임 종료 / Match ended", "참가 인원이 부족해 게임이 종료되었습니다.", nil, nil)
+	else
+		for index, entry in ranking do
+			local prefix = index == 1 and "WINNER  " or ""
+			local detail = string.format("%d points", entry.score or 0)
+			if index == 1 and (payload.winnerBonus or 0) > 0 then
+				detail ..= string.format("  •  +%d winner coins", payload.winnerBonus)
+			end
+			self:_modalRow(prefix .. tostring(index) .. ". " .. entry.name, detail, nil, nil)
+		end
+	end
+	self:_modalRow(
+		"다음 수업 / What's next?",
+		self.strings.playAgain,
+		"확인 / Continue",
+		function()
+			self.modal.Visible = false
+		end
+	)
+	self.modal.Visible = true
+end
+
 function UIController:_clearModal()
 	if self.galleryCanvasController then
 		self.galleryCanvasController:destroy()
@@ -523,6 +590,16 @@ function UIController:onState(payload)
 		self.sounds:play("round")
 	end
 	self.timer.Text = payload.seconds > 0 and tostring(payload.seconds) or "--"
+	if (payload.roundNumber or 0) > 0 then
+		self.roundBadge.Text = string.format(
+			"%s %d/%d",
+			self.strings.round,
+			payload.roundNumber,
+			payload.totalRounds or 5
+		)
+	else
+		self.roundBadge.Text = ""
+	end
 	local isArtist = payload.artistUserId == self.player.UserId
 	self.canvasController:setEnabled(payload.state == "Drawing" and isArtist, payload.mode)
 	self.guessBox.Visible = payload.state == "Drawing" and not isArtist
@@ -536,6 +613,10 @@ function UIController:onState(payload)
 	elseif payload.state == "Drawing" then self.status.Text = isArtist and self.strings.yourTurn or self.strings.drawing
 	elseif payload.state == "Reveal" then self.status.Text = self.strings.reveal
 	elseif payload.state == "Results" then self.status.Text = self.strings.results end
+
+	if payload.state == "Results" and previousState ~= "Results" then
+		self:_openResults(payload)
+	end
 
 	if payload.state == "Choosing" and isArtist and payload.choices then
 		self:_showChoices(payload.choices)
@@ -581,6 +662,14 @@ function UIController:bind()
 		self.canvasController:setCosmetics(data.equipped)
 		self:_refreshPalette()
 		self.currency.Text = tostring(data.coins or 0) .. " " .. self.strings.coins
+		if not self.hasShownTutorial then
+			self.hasShownTutorial = true
+			task.delay(0.75, function()
+				if not self.modal.Visible and (not self.lastState or self.lastState.state == "Waiting") then
+					self:_openTutorial()
+				end
+			end)
+		end
 		if self.modal.Visible and string.find(self.modalTitle.Text, "Shop") then
 			self:_openShop()
 		end
@@ -588,6 +677,8 @@ function UIController:bind()
 	self.remotes.OpenPanel.OnClientEvent:Connect(function(panel)
 		if panel == "shop" then
 			self:_openShop()
+		elseif panel == "tutorial" then
+			self:_openTutorial()
 		elseif panel == "quests" then
 			self:_openQuests()
 		elseif panel == "gallery" then
@@ -606,6 +697,7 @@ function UIController:bind()
 			self:_openGallery()
 		end
 	end)
+	self.remotes.RequestGallery:FireServer("playerData")
 end
 
 return UIController

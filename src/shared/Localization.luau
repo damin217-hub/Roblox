@@ -8,6 +8,9 @@ local strings = {
 		yourTurn = "그림을 그려주세요!",
 		reveal = "정답 공개",
 		results = "최종 결과",
+		round = "라운드",
+		tutorialTitle = "모모의 첫 수업",
+		playAgain = "다시 플레이하려면 중앙 포털로!",
 		guessPlaceholder = "정답을 입력하세요",
 		submit = "보내기",
 		hide = "캔버스 숨기기",
@@ -27,6 +30,9 @@ local strings = {
 		yourTurn = "Draw the prompt!",
 		reveal = "The answer was",
 		results = "Final Results",
+		round = "Round",
+		tutorialTitle = "Momo's First Lesson",
+		playAgain = "Return to the center portal to play again!",
 		guessPlaceholder = "Type your guess",
 		submit = "Send",
 		hide = "Hide Canvas",
@@ -45,4 +51,3 @@ return function(locale: string)
 	end
 	return strings.en
 end
-
