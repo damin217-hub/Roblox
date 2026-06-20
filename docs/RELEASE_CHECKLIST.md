@@ -5,7 +5,8 @@
 - [ ] `scripts/publish.ps1 -VersionType Saved`로 비공개 QA 버전 업로드
 - [ ] 열려 있는 Studio 작업을 저장·종료한 뒤 `scripts/verify.ps1 -RunStudio` 1회 실행
 - [ ] 콘텐츠 성숙도 설문을 각 Experience에 맞게 제출
-- [ ] 아이콘 512×512, 썸네일 1920×1080 업로드
+- [x] 아이콘 512×512, 썸네일 1920×1080 제작 및 로컬 검수
+- [ ] Creator Dashboard에 아이콘과 썸네일 업로드
 - [ ] API Services/DataStore 테스트 후 Studio API 접근 다시 제한
 - [ ] 12인 서버 30분 플레이 테스트
 - [ ] PC 및 Android/iOS 터치 테스트
