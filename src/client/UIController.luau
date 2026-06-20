@@ -47,11 +47,11 @@ local function button(parent, value, size, position, color)
 	return item
 end
 
-function UIController.new(remotes)
+function UIController.new(remotes, playerOverride, localeOverride)
 	local self = setmetatable({}, UIController)
-	self.player = Players.LocalPlayer
+	self.player = playerOverride or Players.LocalPlayer
 	self.remotes = remotes
-	self.strings = Localization(LocalizationService.RobloxLocaleId)
+	self.strings = Localization(localeOverride or LocalizationService.RobloxLocaleId)
 	self.hidden = false
 	self.lastState = nil
 	self.playerData = nil
@@ -296,8 +296,8 @@ function UIController:build()
 	self.canvasController:bind()
 
 	local camera = workspace.CurrentCamera
-	local function applyResponsiveLayout()
-		local width = camera and camera.ViewportSize.X or 1280
+	local function applyResponsiveLayout(widthOverride)
+		local width = widthOverride or (camera and camera.ViewportSize.X or 1280)
 		if width < 900 then
 			top.Size = UDim2.new(1, -16, 0, 62)
 			top.Position = UDim2.fromOffset(8, 6)
@@ -334,6 +334,7 @@ function UIController:build()
 			self.modal.Size = UDim2.new(0.76, 0, 0.72, 0)
 		end
 	end
+	self.applyResponsiveLayout = applyResponsiveLayout
 	applyResponsiveLayout()
 	if camera then
 		camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)

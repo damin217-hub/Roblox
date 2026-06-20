@@ -46,7 +46,7 @@ if ($RunStudio) {
 }
 
 if (-not $RunStudio) {
-    Write-Host "Static verification complete. Use -RunStudio to run the six hidden Studio checks."
+    Write-Host "Static verification complete. Use -RunStudio to run the eight hidden Studio checks."
     return
 }
 
@@ -154,6 +154,42 @@ foreach ($target in $targets) {
     }
     if (-not $scenarioProcess.HasExited) {
         Stop-Process -Id $scenarioProcess.Id -Force
+    }
+
+    $departureOutput = "$root\build\departure-$($target.Name).log"
+    Remove-Item $departureOutput -ErrorAction SilentlyContinue
+    $departureProcess = Start-Process -FilePath $studio.FullName -WindowStyle Hidden -PassThru -ArgumentList @(
+        "--task", "RunScript",
+        "--localPlaceFile", "`"$($target.Place)`"",
+        "--runScriptFile", "`"$root\tests\departure_scenario.luau`"",
+        "--outputFile", "`"$departureOutput`"",
+        "--quitAfterExecution"
+    )
+    $launchedProcesses += $departureProcess
+    $departureComplete = $false
+    for ($attempt = 0; $attempt -lt 90; $attempt++) {
+        Start-Sleep -Seconds 1
+        if (Test-Path $departureOutput) {
+            $departureContent = Get-Content $departureOutput -Raw
+            $departureComplete = $departureContent -and [regex]::IsMatch($departureContent, "(?m)^\[DEPARTURE COMPLETE\]")
+            if ($departureComplete) { break }
+        }
+    }
+    if (-not $departureComplete) { throw "$($target.Name) departure scenario test did not complete." }
+    if (
+        [regex]::IsMatch($departureContent, "(?m)^Stack Begin$") -or
+        [regex]::IsMatch($departureContent, "(?m)^Requested module experienced") -or
+        [regex]::IsMatch($departureContent, "(?m)^\[FAIL\]")
+    ) {
+        throw "$($target.Name) departure scenario test contains errors."
+    }
+    $departurePasses = ([regex]::Matches($departureContent, "(?m)^\[PASS\]")).Count
+    Write-Host "$($target.Name): $departurePasses departure recovery checks passed."
+    if (-not $departureProcess.HasExited) {
+        $departureProcess.WaitForExit(15000) | Out-Null
+    }
+    if (-not $departureProcess.HasExited) {
+        Stop-Process -Id $departureProcess.Id -Force
     }
 }
 } finally {

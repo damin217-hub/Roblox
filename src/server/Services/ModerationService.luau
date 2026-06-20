@@ -70,7 +70,7 @@ function ModerationService.voteSkip(player: Player, roundId: string, eligibleCou
 	skipVotes[roundId][player.UserId] = true
 	local count = 0
 	for _ in skipVotes[roundId] do count += 1 end
-	return eligibleCount >= 2 and count >= math.ceil(eligibleCount * 0.6)
+	return eligibleCount >= 1 and count >= math.ceil(eligibleCount * 0.6)
 end
 
 function ModerationService.clearRound(roundId: string)

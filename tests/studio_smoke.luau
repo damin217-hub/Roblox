@@ -46,6 +46,7 @@ local CanvasService = require(services.CanvasService)
 local QuestService = require(services.QuestService)
 local StrokeCodec = require(shared.StrokeCodec)
 local PlayerDataService = require(services.PlayerDataService)
+local ModerationService = require(services.ModerationService)
 
 check(Config.ROUNDS_PER_MATCH == 5, "match contains five rounds")
 check(Config.DRAWING_SECONDS == 75, "drawing timer is 75 seconds")
@@ -118,6 +119,36 @@ check(questData[3].scope == "weekly" and questData[3].progress == 10, "weekly qu
 check(type(PlayerDataService.retryPending) == "function", "failed DataStore writes have a retry queue")
 check(type(PlayerDataService.getPendingSaveCount) == "function", "pending save queue is observable for shutdown flush")
 
+local reconnectA = { UserId = 88001 }
+local reconnectB = { UserId = 88001 }
+PlayerDataService.load(reconnectA)
+PlayerDataService.add(reconnectA, "coins", 275)
+PlayerDataService.remove(reconnectA)
+PlayerDataService.load(reconnectB)
+check(PlayerDataService.get(reconnectB).coins == 275, "same-server reconnect restores unsaved session rewards")
+PlayerDataService.remove(reconnectB)
+
+local economyPlayer = { UserId = 88002 }
+local economyData = PlayerDataService.load(economyPlayer)
+economyData.coins = 1000
+PlayerDataService.incrementProgress(economyPlayer, "guesses", 5)
+local firstClaim = PlayerDataService.claimQuest(economyPlayer, "daily_guesses", 5, "guesses", 75, "daily")
+local coinsAfterClaim = economyData.coins
+local duplicateClaim = PlayerDataService.claimQuest(economyPlayer, "daily_guesses", 5, "guesses", 75, "daily")
+check(firstClaim and not duplicateClaim and economyData.coins == coinsAfterClaim, "quest reward cannot be claimed twice")
+local firstPurchase = PlayerDataService.purchase(economyPlayer, "brush_neon")
+local coinsAfterPurchase = economyData.coins
+local duplicatePurchase = PlayerDataService.purchase(economyPlayer, "brush_neon")
+check(firstPurchase and not duplicatePurchase and economyData.coins == coinsAfterPurchase, "owned cosmetic cannot charge coins twice")
+PlayerDataService.remove(economyPlayer)
+
+local voterA = { UserId = 77101 }
+local voterB = { UserId = 77102 }
+check(ModerationService.voteSkip(voterA, "two-player-round", 1), "single eligible guesser can unanimously skip in a two-player match")
+check(not ModerationService.voteSkip(voterA, "three-player-round", 2), "one vote cannot skip when two guessers are eligible")
+check(not ModerationService.voteSkip(voterA, "three-player-round", 2), "duplicate skip vote is not counted twice")
+check(ModerationService.voteSkip(voterB, "three-player-round", 2), "skip succeeds after the required distinct votes")
+
 MapService.build()
 local map = workspace:FindFirstChild("ArtAcademyMap")
 check(map ~= nil, "Art Academy map builds")
@@ -152,5 +183,64 @@ check(canvasController.brushStyle == "neon", "equipped brush cosmetic changes re
 check(canvasController:getPalette() == CanvasController.CANDY_COLORS, "equipped palette cosmetic changes colors")
 canvasController:destroy()
 testCanvas:Destroy()
+
+local fakeSignals = {}
+local fakeRemotes = {}
+for _, remoteName in require(shared.RemoteNames) do
+	local event = Instance.new("BindableEvent")
+	table.insert(fakeSignals, event)
+	fakeRemotes[remoteName] = {
+		OnClientEvent = event.Event,
+		FireServer = function() end,
+	}
+end
+local fakePlayerGui = Instance.new("Folder")
+local fakePlayer = {
+	UserId = 99001,
+	PlayerGui = fakePlayerGui,
+}
+local uiController = UIController.new(fakeRemotes, fakePlayer, "ko-kr")
+uiController:build()
+check(fakePlayerGui:FindFirstChild("ArtAcademyUI") ~= nil, "full game UI builds for a test player")
+check(uiController.choiceFrame:FindFirstChildOfClass("UISizeConstraint") ~= nil, "prompt chooser has mobile-safe size constraints")
+uiController.applyResponsiveLayout(600)
+check(not uiController.title.Visible, "mobile layout hides the wide title")
+check(uiController.canvas.AbsoluteSize.X >= 0, "mobile layout keeps the canvas mounted")
+uiController.applyResponsiveLayout(1280)
+check(uiController.title.Visible, "desktop layout restores the academy title")
+uiController:onState({
+	state = "Drawing",
+	seconds = 75,
+	artistUserId = fakePlayer.UserId,
+	artistName = "Test Artist",
+	roundId = "ui-round-1",
+	mode = "ALL_AGES",
+	roundNumber = 3,
+	totalRounds = 5,
+	scores = {},
+	prompt = { ko = "고양이", en = "Cat" },
+})
+check(uiController.roundBadge.Text == "라운드 3/5", "round progress is visible in Korean")
+check(uiController.canvasController.enabled, "artist canvas is enabled during drawing")
+uiController:onState({
+	state = "Results",
+	seconds = 10,
+	artistUserId = 0,
+	artistName = "",
+	roundId = "ui-round-1",
+	mode = "ALL_AGES",
+	roundNumber = 5,
+	totalRounds = 5,
+	scores = {
+		{ userId = fakePlayer.UserId, name = "Test Artist", score = 100, title = "" },
+	},
+	ranking = {
+		{ userId = fakePlayer.UserId, name = "Test Artist", score = 100, title = "" },
+	},
+	winnerBonus = 50,
+})
+check(uiController.modal.Visible and string.find(uiController.modalTitle.Text, "최종 결과") ~= nil, "results modal opens after the match")
+fakePlayerGui:Destroy()
+for _, event in fakeSignals do event:Destroy() end
 
 print("[SMOKE COMPLETE] Art Academy project structure and core modules validated")

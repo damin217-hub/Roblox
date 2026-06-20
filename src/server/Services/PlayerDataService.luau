@@ -55,6 +55,26 @@ local function cloneDefault()
 	}
 end
 
+local function cloneData(source)
+	return {
+		coins = source.coins or 0,
+		xp = source.xp or 0,
+		wins = source.wins or 0,
+		correctGuesses = source.correctGuesses or 0,
+		drawings = source.drawings or 0,
+		owned = table.clone(source.owned or DEFAULT.owned),
+		equipped = table.clone(source.equipped or DEFAULT.equipped),
+		daily = table.clone(source.daily or DEFAULT.daily),
+		weekly = table.clone(source.weekly or DEFAULT.weekly),
+		claimedQuests = table.clone(source.claimedQuests or {}),
+		claims = {
+			daily = table.clone(source.claims and source.claims.daily or {}),
+			weekly = table.clone(source.claims and source.claims.weekly or {}),
+		},
+		receipts = table.clone(source.receipts or {}),
+	}
+end
+
 local function owns(data, itemId: string): boolean
 	return table.find(data.owned, itemId) ~= nil
 end
@@ -70,13 +90,18 @@ end
 
 function PlayerDataService.load(player: Player)
 	local data = cloneDefault()
-	local ok, saved = pcall(function()
-		local activeStore = getStore()
-		return activeStore and activeStore:GetAsync("player_" .. player.UserId) or nil
-	end)
-	if ok and type(saved) == "table" then
-		for key, value in saved do
-			data[key] = value
+	local pending = pendingSaves[player.UserId]
+	if type(pending) == "table" then
+		data = cloneData(pending)
+	else
+		local ok, saved = pcall(function()
+			local activeStore = getStore()
+			return activeStore and activeStore:GetAsync("player_" .. player.UserId) or nil
+		end)
+		if ok and type(saved) == "table" then
+			for key, value in saved do
+				data[key] = value
+			end
 		end
 	end
 	data.owned = type(data.owned) == "table" and data.owned or table.clone(DEFAULT.owned)

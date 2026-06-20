@@ -28,6 +28,17 @@ local function isFastStudioTest(): boolean
 	return RunService:IsStudio() and game:GetAttribute("ArtAcademyFastScenarioTest") == true
 end
 
+local function requiredPlayerCount(): number
+	if RunService:IsStudio() then
+		local override = game:GetAttribute("ArtAcademyRequiredPlayersTest")
+		if type(override) == "number" then
+			return math.clamp(math.floor(override), 1, Config.MAX_PLAYERS)
+		end
+		return 1
+	end
+	return Config.MIN_PLAYERS
+end
+
 local function isActive(player: Player): boolean
 	return table.find(matchPlayers, player) ~= nil and player.Parent == Players
 end
@@ -201,7 +212,7 @@ function RoundService.run()
 	while true do
 		state = "Waiting"
 		currentRound = 0
-		local requiredPlayers = RunService:IsStudio() and 1 or Config.MIN_PLAYERS
+		local requiredPlayers = requiredPlayerCount()
 		while #readyList() < requiredPlayers do
 			local readyCount = #readyList()
 			broadcast(0, { needed = requiredPlayers - readyCount, readyCount = readyCount })
