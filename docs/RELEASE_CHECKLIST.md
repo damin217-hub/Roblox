@@ -1,5 +1,6 @@
 # Release Checklist
 
+- [x] GitHub `main`·`develop` 푸시 및 Actions Selene·Rojo 성공
 - [ ] All Ages와 Free Draw 16+를 서로 다른 Experience로 생성
 - [ ] `universe-places:write` API 키와 두 Experience의 Universe/Place ID를 환경변수로 설정
 - [ ] `scripts/publish.ps1 -VersionType Saved`로 비공개 QA 버전 업로드

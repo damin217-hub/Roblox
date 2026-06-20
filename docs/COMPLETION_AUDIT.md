@@ -24,6 +24,7 @@ Audit date: 2026-06-20
 | Persistence | DataStore sessions, autosave, receipt idempotency, disconnect retry queue, same-server unsaved reward recovery, shutdown flush |
 | Cosmetic monetization | Disabled-by-default Game Pass/Product hooks; no pay-to-win benefit |
 | Operations | Analytics events, moderation runbook, publishing copy, asset register and release checklist |
+| Source control | `main` and `develop` pushed to `damin217-hub/Roblox`; GitHub Actions Selene and both Rojo builds pass |
 | Build quality | Selene 0 errors/warnings; both Rojo builds; 74 Studio smoke, 28 server-bootstrap, 33 full-match and 15 departure-recovery checks per build |
 
 ## Requires external Roblox/GitHub state
@@ -36,7 +37,6 @@ These items cannot be proven or completed without account-owned resources:
 - Create optional monetization products and add their IDs; primary moderator `rangs0524` is configured.
 - Upload final icon and thumbnail files.
 - Run published DataStore QA and a real 8–12 player, 30-minute device test.
-- Create or identify the destination GitHub repository and push `main` and `develop`.
 - Move from private QA to limited beta and public release only after the checks above pass.
 
 The local build is therefore a runtime-validated test candidate. It is not yet a release candidate or publicly deployed game until interactive device and multiplayer QA pass.

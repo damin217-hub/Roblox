@@ -46,6 +46,18 @@ RobloxStudioBeta.exe --task RunScript `
 .\scripts\verify.ps1 -RunStudio
 ```
 
+## 단일 로컬 플레이테스트
+
+서버 Place 최신 버전 조회 오류를 피하고 자동 재실행 없이 검증된 로컬 빌드 하나만 엽니다.
+실행 전에 열려 있는 Studio를 직접 저장하고 종료하세요.
+
+```powershell
+.\scripts\open-playtest.ps1 -Experience AllAges
+.\scripts\open-playtest.ps1 -Experience FreeDraw
+```
+
+Studio에서 Play를 누른 뒤 `docs/MANUAL_PLAYTEST.md` 순서로 확인합니다.
+
 ## Open Cloud 배포
 
 Creator Dashboard에서 두 개의 비공개 Experience와 `universe-places:write` 권한 API 키를 만든 뒤
