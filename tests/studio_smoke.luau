@@ -181,8 +181,31 @@ check(canvasController.imageLabel ~= nil, "EditableImage is bound to an ImageLab
 canvasController:setCosmetics({ brush = "brush_neon", palette = "palette_candy" })
 check(canvasController.brushStyle == "neon", "equipped brush cosmetic changes renderer style")
 check(canvasController:getPalette() == CanvasController.CANDY_COLORS, "equipped palette cosmetic changes colors")
+canvasController:renderSnapshot(decoded)
+check(#canvasController.strokes == 1, "gallery renderer replays a decoded artwork")
+canvasController:renderSnapshot(StrokeCodec.decode(StrokeCodec.encode(manyStrokes, Config.GALLERY_MAX_STROKES)))
+check(#canvasController.strokes == Config.GALLERY_MAX_STROKES, "gallery renderer handles the full 400-stroke replay budget")
 canvasController:destroy()
 testCanvas:Destroy()
+
+local submittedPayloads = {}
+local inputCanvas = Instance.new("Frame")
+inputCanvas.Size = UDim2.fromOffset(900, 600)
+local inputController = CanvasController.new(inputCanvas, {
+	SubmitStroke = {
+		FireServer = function(_, payload)
+			table.insert(submittedPayloads, payload)
+		end,
+	},
+})
+inputController:setEnabled(true, "ALL_AGES")
+inputController:_submit(Vector2.new(0.25, 0.5))
+check(submittedPayloads[1].kind == "stamp" and submittedPayloads[1].size >= 18, "all-ages input emits a constrained stamp command")
+inputController:setEnabled(true, "FREE_DRAW_16_PLUS")
+inputController:_submit(Vector2.new(0.5, 0.5))
+check(submittedPayloads[2].kind == "line", "free-draw input emits a continuous line command")
+inputController:destroy()
+inputCanvas:Destroy()
 
 local fakeSignals = {}
 local fakeRemotes = {}
