@@ -8,6 +8,7 @@ end
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local StarterPlayer = game:GetService("StarterPlayer")
+local Lighting = game:GetService("Lighting")
 
 local shared = ReplicatedStorage:FindFirstChild("ArtAcademy")
 check(shared ~= nil, "ReplicatedStorage.ArtAcademy exists")
@@ -155,6 +156,35 @@ check(map:FindFirstChild("MatchPortal") ~= nil, "match portal exists")
 check(map:FindFirstChild("WelcomeArchTop") ~= nil, "academy entrance arch guides new players")
 check(map:FindFirstChild("WelcomePath") ~= nil, "spawn path guides players to the match portal")
 check(map:FindFirstChild("TutorialZone") ~= nil, "tutorial station has a distinct visual zone")
+check(map.Floor.Size.X >= 150 and map.Floor.Size.Z >= 130, "lobby footprint supports a spacious social environment")
+check(map:FindFirstChild("PaintbrushLandmark") ~= nil, "central portal has a memorable art landmark")
+check(map:FindFirstChild("TutorialClassroom") ~= nil, "tutorial has a dedicated academy building")
+check(map:FindFirstChild("PaletteShop") ~= nil, "shop has a dedicated academy building")
+check(map:FindFirstChild("MissionStudio") ~= nil, "missions have a dedicated academy building")
+check(map:FindFirstChild("GalleryHall") ~= nil, "gallery has a dedicated academy building")
+check(map:FindFirstChild("OutdoorGalleryFrames") ~= nil, "lobby includes gallery scenery for waiting players")
+check(map:FindFirstChild("MainPlaza") ~= nil, "central play zone has a dedicated visual foundation")
+check(map:FindFirstChild("MainPlazaRing") ~= nil, "central play zone is emphasized with a plaza ring")
+check(Lighting.Brightness < 2, "lobby lighting avoids an over-bright global exposure")
+check(Lighting.ClockTime >= 16, "lobby uses a calmer late-afternoon lighting direction")
+for _, buildingName in { "TutorialClassroom", "PaletteShop", "MissionStudio", "GalleryHall" } do
+	local building = map:FindFirstChild(buildingName)
+	local canopy = building and building:FindFirstChild("Canopy")
+	local toPlaza = canopy and (Vector3.new(0, canopy.Position.Y, 4) - canopy.Position).Unit or Vector3.zero
+	check(canopy ~= nil and canopy.CFrame.LookVector:Dot(toPlaza) > 0.7, buildingName .. " entrance faces the central plaza")
+end
+
+local waitingSeatCount = 0
+local academyColumnCount = 0
+for _, child in map:GetChildren() do
+	if string.find(child.Name, "WaitingBench_") == 1 then
+		waitingSeatCount += 1
+	elseif string.find(child.Name, "AcademyColumn_") == 1 then
+		academyColumnCount += 1
+	end
+end
+check(waitingSeatCount == 8, "central queue includes eight social waiting benches")
+check(academyColumnCount == 24, "academy silhouette is defined by a complete colonnade")
 
 local npcCount = 0
 for _, descendant in map:GetDescendants() do
