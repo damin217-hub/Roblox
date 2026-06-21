@@ -1,35 +1,25 @@
 # Release Manifest
 
-Place builds generated from game-source commit:
+전체연령 단일 빌드만 배포합니다.
 
-`6d7e491`
-
-Validation suite current through commit:
-
-`dfe5c08`
-
-## Place builds
-
-| Experience | File | SHA-256 |
+| Experience | File | 상태 |
 |---|---|---|
-| All Ages | `build/ArtAcademy-AllAges.rbxlx` | `B7C06C2E515512236535DD23574B0438F5C87C54A90BDE79096AC618DD81D1BA` |
-| Free Draw 16+ | `build/ArtAcademy-FreeDraw16Plus.rbxlx` | `3FB45A2900C422ED2E1876EB8F29CD8CDDE085DAAD3671C6AA184936A447AC84` |
+| All Ages | `build/ArtAcademy-AllAges.rbxlx` | `7D60CFA07C60896BFCBE8BF09DFB5D1BF8169F379A610F452D58C10E2A8AF5C4` |
 
-The release ZIP is intentionally not regenerated yet. Package generation remains gated on interactive Studio, mobile and multiplayer QA.
+릴리스 ZIP은 실제 PC·모바일·멀티플레이 QA가 모두 통과할 때만 다시 생성합니다.
 
-## Verification
+## 자동 검증
 
-- Selene: 0 errors, 0 warnings, 0 parse errors
-- Rojo: both place builds succeeded
-- Studio RunScript smoke test: 74 checks passed for each place
-- Studio server bootstrap integration: 28 checks passed for each place
-- Full 12-player, five-round match lifecycle: 33 checks passed for each place
-- Mid-match artist departure recovery: 15 checks passed for each place
-- Runtime module loading errors: 0
+- Selene: 오류 0, 경고 0, 파싱 오류 0
+- Studio 스모크: 77개 통과
+- 런타임 부팅: 28개 통과
+- 12인 5라운드 전체 매치: 33개 통과
+- 출제자 중도 이탈 복구: 15개 통과
 
-## Configuration required before publishing
+## 배포 전 필수 설정
 
-- Primary moderator `rangs0524` is configured in `Config.ADMIN_USER_IDS`.
-- Create optional cosmetic Game Pass/Developer Products and enter IDs in `Config.MONETIZATION`.
-- Complete the content maturity questionnaire separately for each Experience.
-- Keep both Experiences private until DataStore and multiplayer QA are complete.
+- All Ages Universe ID와 Place ID
+- `universe-places:write` Open Cloud API 키
+- 사용자 그림 기능을 포함한 콘텐츠 성숙도 설문
+- 운영자 계정과 신고·갤러리 승인 절차
+- 실제 기기 및 8–12인 비공개 서버 검증

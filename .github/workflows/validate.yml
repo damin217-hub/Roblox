@@ -18,5 +18,3 @@ jobs:
         run: cargo install rojo --version 7.6.1 --locked
       - name: Build All Ages place
         run: rojo build all-ages.project.json -o /tmp/all-ages.rbxlx
-      - name: Build Free Draw 16+ place
-        run: rojo build free-draw.project.json -o /tmp/free-draw.rbxlx

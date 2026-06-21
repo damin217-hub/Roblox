@@ -1,8 +1,3 @@
-param(
-    [ValidateSet("AllAges", "FreeDraw")]
-    [string]$Experience = "AllAges"
-)
-
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 
@@ -18,11 +13,7 @@ if (-not $studio) {
     throw "Roblox Studio is not installed."
 }
 
-$placeName = if ($Experience -eq "AllAges") {
-    "ArtAcademy-AllAges.rbxlx"
-} else {
-    "ArtAcademy-FreeDraw16Plus.rbxlx"
-}
+$placeName = "ArtAcademy-AllAges.rbxlx"
 $place = Join-Path "$root\build" $placeName
 if (-not (Test-Path -LiteralPath $place)) {
     throw "Missing $placeName. Run scripts\verify.ps1 first."
@@ -33,7 +24,7 @@ $process = Start-Process -FilePath $studio.FullName -PassThru -ArgumentList @(
     "--localPlaceFile", "`"$place`""
 )
 
-Write-Host "Opened one local Studio session for $Experience."
+Write-Host "Opened one local Studio session for the All Ages game."
 Write-Host "Place: $place"
 Write-Host "Studio process ID: $($process.Id)"
 Write-Host "Press Play in Studio and follow docs\MANUAL_PLAYTEST.md."

@@ -9,6 +9,10 @@
       }
     },
     "ServerScriptService": {
+      "ExperienceMode": {
+        "$className": "StringValue",
+        "$properties": { "Value": "ALL_AGES" }
+      },
       "ArtAcademyServer": {
         "$path": "src/server"
       }
@@ -22,4 +26,3 @@
     }
   }
 }
-

@@ -9,9 +9,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $required = @(
     "ROBLOX_API_KEY",
     "ROBLOX_ALL_AGES_UNIVERSE_ID",
-    "ROBLOX_ALL_AGES_PLACE_ID",
-    "ROBLOX_FREE_DRAW_UNIVERSE_ID",
-    "ROBLOX_FREE_DRAW_PLACE_ID"
+    "ROBLOX_ALL_AGES_PLACE_ID"
 )
 
 foreach ($name in $required) {
@@ -27,12 +25,6 @@ $targets = @(
         UniverseId = [Environment]::GetEnvironmentVariable("ROBLOX_ALL_AGES_UNIVERSE_ID")
         PlaceId = [Environment]::GetEnvironmentVariable("ROBLOX_ALL_AGES_PLACE_ID")
         File = "$root\build\ArtAcademy-AllAges.rbxlx"
-    },
-    @{
-        Name = "Free Draw 16+"
-        UniverseId = [Environment]::GetEnvironmentVariable("ROBLOX_FREE_DRAW_UNIVERSE_ID")
-        PlaceId = [Environment]::GetEnvironmentVariable("ROBLOX_FREE_DRAW_PLACE_ID")
-        File = "$root\build\ArtAcademy-FreeDraw16Plus.rbxlx"
     }
 )
 
@@ -60,5 +52,4 @@ foreach ($target in $targets) {
     Write-Host "$($target.Name): uploaded version $($result.versionNumber) as $VersionType."
 }
 
-Write-Host "Both Roblox places uploaded successfully."
-
+Write-Host "The All Ages Roblox place uploaded successfully."

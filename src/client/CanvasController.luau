@@ -26,6 +26,12 @@ local CANDY_COLORS = {
 	Color3.fromRGB(180, 125, 255),
 	Color3.fromRGB(255, 255, 255),
 }
+local BRUSH_PRESETS = {
+	fine = { size = 6, opacity = 1 },
+	marker = { size = 14, opacity = 0.8 },
+	bold = { size = 24, opacity = 1 },
+	soft = { size = 18, opacity = 0.45 },
+}
 
 function CanvasController.new(canvas: GuiObject, remotes)
 	local self = setmetatable({}, CanvasController)
@@ -35,12 +41,15 @@ function CanvasController.new(canvas: GuiObject, remotes)
 	self.mode = "ALL_AGES"
 	self.color = COLORS[1]
 	self.size = 10
+	self.opacity = 1
 	self.erase = false
 	self.stampType = "circle"
 	self.palette = COLORS
 	self.brushStyle = "classic"
 	self.drawing = false
+	self.activeTouch = nil
 	self.last = nil
+	self.lastSubmitAt = 0
 	self.objects = {}
 	self.byId = {}
 	self.strokes = {}
@@ -94,6 +103,11 @@ end
 function CanvasController:setEnabled(enabled: boolean, mode: string)
 	self.enabled = enabled
 	self.mode = mode
+	if not enabled then
+		self.drawing = false
+		self.activeTouch = nil
+		self.last = nil
+	end
 end
 
 function CanvasController:setColor(color: Color3)
@@ -116,7 +130,22 @@ function CanvasController:getPalette()
 end
 
 function CanvasController:setSize(size: number)
-	self.size = size
+	self.size = math.clamp(size, Config.MIN_BRUSH_SIZE, Config.MAX_BRUSH_SIZE)
+end
+
+function CanvasController:setOpacity(opacity: number)
+	self.opacity = math.clamp(opacity, 0.25, 1)
+end
+
+function CanvasController:applyPreset(name: string)
+	local preset = BRUSH_PRESETS[name]
+	if not preset then
+		return false
+	end
+	self:setSize(preset.size)
+	self:setOpacity(preset.opacity)
+	self.erase = false
+	return true
 end
 
 function CanvasController:setErase(erase: boolean)
@@ -151,6 +180,7 @@ function CanvasController:_render(stroke)
 	line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
 	line.BackgroundColor3 = stroke.erase and Color3.fromRGB(255, 255, 255)
 		or Color3.new(stroke.color.r, stroke.color.g, stroke.color.b)
+	line.BackgroundTransparency = stroke.erase and 0 or (1 - (stroke.opacity or 1))
 	line.BorderSizePixel = 0
 	line.ZIndex = 4
 	local corner = Instance.new("UICorner")
@@ -174,18 +204,9 @@ function CanvasController:_drawEditableStroke(stroke)
 	local radius = math.max(1, math.floor(stroke.size / 2))
 	local color = stroke.erase and Color3.fromRGB(255, 255, 255)
 		or Color3.new(stroke.color.r, stroke.color.g, stroke.color.b)
-	if stroke.kind == "stamp" and stroke.stampType == "square" then
-		local diameter = radius * 2
-		image:DrawRectangle(
-			Vector2.new(math.floor(b.X - radius), math.floor(b.Y - radius)),
-			Vector2.new(diameter, diameter),
-			color,
-			0,
-			Enum.ImageCombineType.Overwrite
-		)
-		return
-	end
 	local steps = math.max(1, math.ceil(distance / math.max(1, radius * 0.65)))
+	local transparency = stroke.erase and 0 or (1 - (stroke.opacity or 1))
+	local combineType = stroke.erase and Enum.ImageCombineType.Overwrite or Enum.ImageCombineType.AlphaBlend
 	for index = 0, steps do
 		local alpha = index / steps
 		local point = a:Lerp(b, alpha)
@@ -198,13 +219,24 @@ function CanvasController:_drawEditableStroke(stroke)
 				Enum.ImageCombineType.AlphaBlend
 			)
 		end
-		image:DrawCircle(
-			Vector2.new(math.floor(point.X), math.floor(point.Y)),
-			radius,
-			color,
-			0,
-			Enum.ImageCombineType.Overwrite
-		)
+		if stroke.stampType == "square" then
+			local diameter = radius * 2
+			image:DrawRectangle(
+				Vector2.new(math.floor(point.X - radius), math.floor(point.Y - radius)),
+				Vector2.new(diameter, diameter),
+				color,
+				transparency,
+				combineType
+			)
+		else
+			image:DrawCircle(
+				Vector2.new(math.floor(point.X), math.floor(point.Y)),
+				radius,
+				color,
+				transparency,
+				combineType
+			)
+		end
 	end
 end
 
@@ -243,6 +275,7 @@ function CanvasController:_renderFallback(stroke)
 	line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
 	line.BackgroundColor3 = stroke.erase and Color3.fromRGB(255, 255, 255)
 		or Color3.new(stroke.color.r, stroke.color.g, stroke.color.b)
+	line.BackgroundTransparency = stroke.erase and 0 or (1 - (stroke.opacity or 1))
 	line.BorderSizePixel = 0
 	line.ZIndex = 4
 	local lineCorner = Instance.new("UICorner")
@@ -303,15 +336,17 @@ function CanvasController:_submit(point: Vector2)
 	local payload = {
 		x = point.X, y = point.Y,
 		px = self.last.X, py = self.last.Y,
-		size = self.mode == "ALL_AGES" and math.max(self.size, 18) or self.size,
+		size = self.size,
+		opacity = self.opacity,
 		color = { r = color.R, g = color.G, b = color.B },
 		erase = self.erase,
-		kind = self.mode == "ALL_AGES" and "stamp" or "line",
+		kind = "line",
 		stampType = self.stampType,
 		brushStyle = self.brushStyle,
 	}
 	self.remotes.SubmitStroke:FireServer(payload)
 	self.last = point
+	self.lastSubmitAt = os.clock()
 end
 
 function CanvasController:bind()
@@ -320,22 +355,36 @@ function CanvasController:bind()
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
 			self.drawing = true
+			self.activeTouch = input.UserInputType == Enum.UserInputType.Touch and input or nil
 			self.last = nil
-			self:_submit(self:_normalized(input.Position))
+			self:_submit(self:_normalized(Vector2.new(input.Position.X, input.Position.Y)))
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input)
 		if not self.enabled or not self.drawing then return end
-		if self.mode == "ALL_AGES" then return end
-		if input.UserInputType == Enum.UserInputType.MouseMovement
-			or input.UserInputType == Enum.UserInputType.Touch then
-			self:_submit(self:_normalized(input.Position))
+		local isMouse = input.UserInputType == Enum.UserInputType.MouseMovement and self.activeTouch == nil
+		local isActiveTouch = input.UserInputType == Enum.UserInputType.Touch and input == self.activeTouch
+		if isMouse or isActiveTouch then
+			local point = self:_normalized(Vector2.new(input.Position.X, input.Position.Y))
+			local pixelDistance = self.last and ((point - self.last) * self.canvas.AbsoluteSize).Magnitude or math.huge
+			if pixelDistance >= math.max(2, self.size * 0.18) and os.clock() - self.lastSubmitAt >= 1 / 40 then
+				self:_submit(point)
+			end
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch then
+		local endedMouse = input.UserInputType == Enum.UserInputType.MouseButton1 and self.activeTouch == nil
+		local endedTouch = input.UserInputType == Enum.UserInputType.Touch and input == self.activeTouch
+		if endedMouse or endedTouch then
+			if self.enabled and self.last then
+				local finalPoint = self:_normalized(Vector2.new(input.Position.X, input.Position.Y))
+				local finalDistance = ((finalPoint - self.last) * self.canvas.AbsoluteSize).Magnitude
+				if finalDistance >= math.max(2, self.size * 0.18) then
+					self:_submit(finalPoint)
+				end
+			end
 			self.drawing = false
+			self.activeTouch = nil
 			self.last = nil
 		end
 	end)
@@ -351,4 +400,5 @@ end
 
 CanvasController.COLORS = COLORS
 CanvasController.CANDY_COLORS = CANDY_COLORS
+CanvasController.BRUSH_PRESETS = BRUSH_PRESETS
 return CanvasController

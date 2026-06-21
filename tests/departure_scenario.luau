@@ -59,7 +59,7 @@ for _, player in { playerA, playerB, playerC } do
 	check(RoundService.toggleReady(player), player.DisplayName .. " joins the queue")
 end
 
-RoundService.init(remotes, "FREE_DRAW_16_PLUS")
+RoundService.init(remotes, "ALL_AGES")
 RoundService.run()
 
 check(departureTriggered, "artist departure is simulated during drawing")

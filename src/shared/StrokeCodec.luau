@@ -27,6 +27,7 @@ function StrokeCodec.encode(strokes, maxStrokes: number?)
 			stroke.kind == "stamp" and 1 or 0,
 			stroke.stampType == "square" and 1 or 0,
 			stroke.brushStyle == "neon" and 1 or 0,
+			math.clamp(math.floor((stroke.opacity or 1) * 100 + 0.5), 25, 100),
 		})
 	end
 	return result
@@ -51,6 +52,7 @@ function StrokeCodec.decode(encoded)
 			kind = item[11] == 1 and "stamp" or "line",
 			stampType = item[12] == 1 and "square" or "circle",
 			brushStyle = item[13] == 1 and "neon" or "classic",
+			opacity = (item[14] or 100) / 100,
 		})
 	end
 	return result

@@ -46,27 +46,28 @@ local function nearestApprovedColor(color)
 	return table.clone(best)
 end
 
-function CanvasService.submit(player: Player, payload, isArtist: boolean, mode: string, cosmetics)
+function CanvasService.submit(player: Player, payload, isArtist: boolean, _mode: string, cosmetics)
 	if not isArtist or type(payload) ~= "table" then return nil end
-	local strokeLimit = mode == "ALL_AGES" and Config.MAX_STAMPS_PER_ROUND or Config.MAX_STROKES_PER_ROUND
-	local rateLimit = mode == "ALL_AGES" and Config.MAX_STAMPS_PER_SECOND or Config.MAX_STROKES_PER_SECOND
-	if #strokes >= strokeLimit then return nil end
-	if not ModerationService.allow(player, "stroke", rateLimit, 1) then return nil end
+	if #strokes >= Config.MAX_STROKES_PER_ROUND then return nil end
+	if not ModerationService.allow(player, "stroke", Config.MAX_STROKES_PER_SECOND, 1) then return nil end
 	if not (finite(payload.x) and finite(payload.y) and finite(payload.px) and finite(payload.py)) then return nil end
 	for _, value in { payload.x, payload.y, payload.px, payload.py } do
 		if value < 0 or value > 1 then return nil end
 	end
 	if not validColor(payload.color) then return nil end
-	local size = math.clamp(tonumber(payload.size) or 8, 2, Config.MAX_BRUSH_SIZE)
-	if mode == "ALL_AGES" and payload.kind ~= "stamp" then return nil end
-	if mode == "ALL_AGES" then
-		local grid = Config.ALL_AGES_GRID
-		payload.x = math.clamp(math.floor(payload.x * grid.X) / grid.X + 0.5 / grid.X, 0, 1)
-		payload.y = math.clamp(math.floor(payload.y * grid.Y) / grid.Y + 0.5 / grid.Y, 0, 1)
-		payload.px, payload.py = payload.x, payload.y
-		payload.color = nearestApprovedColor(payload.color)
-		size = math.clamp(size, 18, 28)
+	local segment = Vector2.new(payload.x - payload.px, payload.y - payload.py)
+	if segment.Magnitude > Config.MAX_STROKE_SEGMENT then return nil end
+	local size = math.clamp(tonumber(payload.size) or 10, Config.MIN_BRUSH_SIZE, Config.MAX_BRUSH_SIZE)
+	local opacity = math.clamp(tonumber(payload.opacity) or 1, 0.25, 1)
+	local grid = Config.ALL_AGES_GRID
+	local function snap(value, cells)
+		return math.clamp(math.floor(value * cells + 0.5) / cells, 0, 1)
 	end
+	payload.x = snap(payload.x, grid.X)
+	payload.y = snap(payload.y, grid.Y)
+	payload.px = snap(payload.px, grid.X)
+	payload.py = snap(payload.py, grid.Y)
+	payload.color = nearestApprovedColor(payload.color)
 	local stroke = {
 		id = #strokes + 1,
 		userId = player.UserId,
@@ -77,8 +78,9 @@ function CanvasService.submit(player: Player, payload, isArtist: boolean, mode: 
 		size = size,
 		color = payload.color,
 		erase = payload.erase == true,
-		kind = mode == "ALL_AGES" and "stamp" or "line",
-		stampType = mode == "ALL_AGES" and (payload.stampType == "square" and "square" or "circle") or nil,
+		opacity = payload.erase == true and 1 or opacity,
+		kind = "line",
+		stampType = payload.stampType == "square" and "square" or "circle",
 		brushStyle = cosmetics and cosmetics.brush == "brush_neon" and "neon" or "classic",
 	}
 	table.insert(strokes, stroke)

@@ -67,31 +67,30 @@ local validStroke = {
 	kind = "line",
 }
 CanvasService.reset()
-check(CanvasService.submit(fakeArtist, validStroke, true, "FREE_DRAW_16_PLUS") ~= nil, "free draw accepts valid artist stroke")
-check(CanvasService.submit(fakeArtist, validStroke, false, "FREE_DRAW_16_PLUS") == nil, "non-artist stroke is rejected")
+validStroke.opacity = 0.7
+validStroke.stampType = "circle"
+local acceptedStroke = CanvasService.submit(fakeArtist, validStroke, true, "ALL_AGES")
+check(acceptedStroke ~= nil, "all-ages mode accepts a validated continuous brush segment")
+check(CanvasService.submit(fakeArtist, validStroke, false, "ALL_AGES") == nil, "non-artist stroke is rejected")
 local invalidStroke = table.clone(validStroke)
 invalidStroke.x = 2
-check(CanvasService.submit(fakeArtist, invalidStroke, true, "FREE_DRAW_16_PLUS") == nil, "out-of-bounds stroke is rejected")
-check(CanvasService.submit(fakeArtist, validStroke, true, "ALL_AGES") == nil, "all-ages mode rejects freehand line")
-local stamp = table.clone(validStroke)
-stamp.kind = "stamp"
-stamp.x = 0.51
-stamp.y = 0.51
-stamp.stampType = "square"
-local originalStampX, originalStampY = stamp.x, stamp.y
-local acceptedStamp = CanvasService.submit(fakeArtist, stamp, true, "ALL_AGES")
-check(acceptedStamp ~= nil, "all-ages mode accepts approved stamp")
-check(acceptedStamp.px == acceptedStamp.x and acceptedStamp.py == acceptedStamp.y, "all-ages stamp cannot form a freehand line")
-check(acceptedStamp.x ~= originalStampX or acceptedStamp.y ~= originalStampY, "all-ages stamp position snaps to a safe grid")
-check(acceptedStamp.stampType == "square", "approved stamp shape is preserved")
+check(CanvasService.submit(fakeArtist, invalidStroke, true, "ALL_AGES") == nil, "out-of-bounds stroke is rejected")
+local longStroke = table.clone(validStroke)
+longStroke.px = 0
+longStroke.py = 0
+check(CanvasService.submit(fakeArtist, longStroke, true, "ALL_AGES") == nil, "oversized stroke segment is rejected")
+check(acceptedStroke.px ~= acceptedStroke.x and acceptedStroke.py ~= acceptedStroke.y, "continuous brush segment preserves its start point")
+check(acceptedStroke.opacity == 0.7, "server preserves validated brush opacity")
+check(acceptedStroke.stampType == "circle", "approved brush shape is preserved")
 
-local encoded = StrokeCodec.encode({ acceptedStamp }, 1)
+local encoded = StrokeCodec.encode({ acceptedStroke }, 1)
 local decoded = StrokeCodec.decode(encoded)
 check(#encoded == 1 and #decoded == 1, "gallery stroke codec round-trips")
-check(decoded[1].kind == "stamp" and decoded[1].stampType == "square", "gallery codec preserves stamp metadata")
+check(decoded[1].kind == "line" and decoded[1].stampType == "circle", "gallery codec preserves brush metadata")
+check(math.abs(decoded[1].opacity - 0.7) < 0.01, "gallery codec preserves opacity")
 local manyStrokes = {}
 for index = 1, 500 do
-	local clone = table.clone(acceptedStamp)
+	local clone = table.clone(acceptedStroke)
 	clone.id = index
 	table.insert(manyStrokes, clone)
 end
@@ -99,13 +98,13 @@ check(#StrokeCodec.encode(manyStrokes, Config.GALLERY_MAX_STROKES) == 400, "gall
 
 local floodArtist = { UserId = 202 }
 local acceptedFlood = 0
-for _ = 1, 20 do
-	local floodStamp = table.clone(stamp)
-	if CanvasService.submit(floodArtist, floodStamp, true, "ALL_AGES") then
+for _ = 1, 60 do
+	local floodStroke = table.clone(validStroke)
+	if CanvasService.submit(floodArtist, floodStroke, true, "ALL_AGES") then
 		acceptedFlood += 1
 	end
 end
-check(acceptedFlood <= Config.MAX_STAMPS_PER_SECOND, "all-ages stamp flood is rate limited")
+check(acceptedFlood <= Config.MAX_STROKES_PER_SECOND, "all-ages stroke flood is rate limited")
 
 local questData = QuestService.getForData({
 	daily = { guesses = 3, rounds = 1 },
@@ -199,11 +198,12 @@ local inputController = CanvasController.new(inputCanvas, {
 	},
 })
 inputController:setEnabled(true, "ALL_AGES")
+inputController:applyPreset("fine")
 inputController:_submit(Vector2.new(0.25, 0.5))
-check(submittedPayloads[1].kind == "stamp" and submittedPayloads[1].size >= 18, "all-ages input emits a constrained stamp command")
-inputController:setEnabled(true, "FREE_DRAW_16_PLUS")
+check(submittedPayloads[1].kind == "line" and submittedPayloads[1].size == 6, "all-ages input emits a continuous fine brush command")
+inputController:setOpacity(0.4)
 inputController:_submit(Vector2.new(0.5, 0.5))
-check(submittedPayloads[2].kind == "line", "free-draw input emits a continuous line command")
+check(submittedPayloads[2].opacity == 0.4, "all-ages input emits the selected opacity")
 inputController:destroy()
 inputCanvas:Destroy()
 
@@ -226,6 +226,11 @@ local uiController = UIController.new(fakeRemotes, fakePlayer, "ko-kr")
 uiController:build()
 check(fakePlayerGui:FindFirstChild("ArtAcademyUI") ~= nil, "full game UI builds for a test player")
 check(uiController.choiceFrame:FindFirstChildOfClass("UISizeConstraint") ~= nil, "prompt chooser has mobile-safe size constraints")
+check(uiController.canvasPanel.Visible and not uiController.openCanvasButton.Visible, "canvas panel opens on game start")
+uiController:setCanvasPanelOpen(false)
+check(not uiController.canvasPanel.Visible and uiController.openCanvasButton.Visible, "canvas panel can be minimized without hiding the game")
+uiController:setCanvasPanelOpen(true)
+check(uiController.canvasPanel.Visible and not uiController.openCanvasButton.Visible, "canvas panel can be restored")
 uiController.applyResponsiveLayout(600)
 check(not uiController.title.Visible, "mobile layout hides the wide title")
 check(uiController.canvas.AbsoluteSize.X >= 0, "mobile layout keeps the canvas mounted")

@@ -61,6 +61,7 @@ function UIController.new(remotes, playerOverride, localeOverride)
 	self.galleryCanvasController = nil
 	self.hasShownTutorial = false
 	self.lastRoundId = ""
+	self.canvasPanelOpen = true
 	self.sounds = SoundController.new()
 	return self
 end
@@ -76,7 +77,7 @@ function UIController:build()
 	local backdrop = Instance.new("Frame")
 	backdrop.Size = UDim2.fromScale(1, 1)
 	backdrop.BackgroundColor3 = Color3.fromRGB(238, 232, 255)
-	backdrop.BackgroundTransparency = 0.08
+	backdrop.BackgroundTransparency = 1
 	backdrop.Parent = gui
 
 	local top = Instance.new("Frame")
@@ -98,8 +99,37 @@ function UIController:build()
 	main.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	main.Parent = gui
 	corner(main, 20)
+	self.canvasPanel = main
 
-	self.prompt = text(main, "", UDim2.new(1, -30, 0, 48), UDim2.fromOffset(15, 8), 22, true)
+	self.prompt = text(main, "", UDim2.new(1, -190, 0, 48), UDim2.fromOffset(15, 8), 22, true)
+	self.prompt.TextXAlignment = Enum.TextXAlignment.Left
+	self.brushStatus = text(main, "마커  14px  80%", UDim2.fromOffset(128, 48), UDim2.new(1, -178, 0, 8), 13, true)
+	self.brushStatus.TextColor3 = Color3.fromRGB(112, 83, 245)
+	local minimizeCanvas = button(
+		main,
+		"—",
+		UDim2.fromOffset(42, 36),
+		UDim2.new(1, -54, 0, 12),
+		Color3.fromRGB(93, 100, 120)
+	)
+	minimizeCanvas.Name = "MinimizeCanvas"
+	minimizeCanvas.MouseButton1Click:Connect(function()
+		self:setCanvasPanelOpen(false)
+	end)
+
+	self.openCanvasButton = button(
+		gui,
+		"그림판 열기 / Open Canvas",
+		UDim2.fromOffset(210, 44),
+		UDim2.fromOffset(12, 98),
+		Color3.fromRGB(112, 83, 245)
+	)
+	self.openCanvasButton.Name = "OpenCanvas"
+	self.openCanvasButton.Visible = false
+	self.openCanvasButton.ZIndex = 15
+	self.openCanvasButton.MouseButton1Click:Connect(function()
+		self:setCanvasPanelOpen(true)
+	end)
 	self.canvas = Instance.new("Frame")
 	self.canvas.Name = "Canvas"
 	self.canvas.Active = true
@@ -119,7 +149,7 @@ function UIController:build()
 	tools.BorderSizePixel = 0
 	tools.ScrollBarThickness = 4
 	tools.ScrollingDirection = Enum.ScrollingDirection.X
-	tools.CanvasSize = UDim2.fromOffset(850, 0)
+	tools.CanvasSize = UDim2.fromOffset(1390, 0)
 	tools.Parent = main
 
 	for index, color in CanvasController.COLORS do
@@ -141,19 +171,64 @@ function UIController:build()
 	undo.MouseButton1Click:Connect(function() self.remotes.UndoStroke:FireServer() end)
 	local clear = button(tools, self.strings.clear, UDim2.fromOffset(82, 36), UDim2.fromOffset(528, 8), Color3.fromRGB(238, 89, 106))
 	clear.MouseButton1Click:Connect(function() self.remotes.ClearCanvas:FireServer() end)
-	local smaller = button(tools, "−", UDim2.fromOffset(42, 36), UDim2.fromOffset(618, 8), Color3.fromRGB(93, 100, 120))
+	local function updateBrushStatus(name)
+		self.brushStatus.Text = string.format(
+			"%s  %dpx  %d%%",
+			name,
+			self.canvasController.size,
+			math.floor(self.canvasController.opacity * 100 + 0.5)
+		)
+	end
+	local presets = {
+		{ id = "fine", label = "세밀", x = 618 },
+		{ id = "marker", label = "마커", x = 684 },
+		{ id = "bold", label = "굵게", x = 750 },
+		{ id = "soft", label = "부드럽게", x = 816 },
+	}
+	for _, preset in presets do
+		local presetId = preset.id
+		local presetLabel = preset.label
+		local presetButton = button(
+			tools,
+			presetLabel,
+			UDim2.fromOffset(60, 36),
+			UDim2.fromOffset(preset.x, 8),
+			Color3.fromRGB(112, 83, 245)
+		)
+		presetButton.MouseButton1Click:Connect(function()
+			self.canvasController:applyPreset(presetId)
+			updateBrushStatus(presetLabel)
+		end)
+	end
+	for index, opacity in { 1, 0.7, 0.4 } do
+		local selectedOpacity = opacity
+		local opacityButton = button(
+			tools,
+			tostring(math.floor(selectedOpacity * 100)) .. "%",
+			UDim2.fromOffset(58, 36),
+			UDim2.fromOffset(882 + (index - 1) * 64, 8),
+			Color3.fromRGB(72, 162, 191)
+		)
+		opacityButton.MouseButton1Click:Connect(function()
+			self.canvasController:setOpacity(selectedOpacity)
+			updateBrushStatus("사용자")
+		end)
+	end
+	local smaller = button(tools, "−", UDim2.fromOffset(42, 36), UDim2.fromOffset(1078, 8), Color3.fromRGB(93, 100, 120))
 	smaller.MouseButton1Click:Connect(function()
-		self.canvasController:setSize(math.max(4, self.canvasController.size - 4))
+		self.canvasController:setSize(self.canvasController.size - 2)
+		updateBrushStatus("사용자")
 	end)
-	local larger = button(tools, "+", UDim2.fromOffset(42, 36), UDim2.fromOffset(666, 8), Color3.fromRGB(93, 100, 120))
+	local larger = button(tools, "+", UDim2.fromOffset(42, 36), UDim2.fromOffset(1126, 8), Color3.fromRGB(93, 100, 120))
 	larger.MouseButton1Click:Connect(function()
-		self.canvasController:setSize(math.min(28, self.canvasController.size + 4))
+		self.canvasController:setSize(self.canvasController.size + 2)
+		updateBrushStatus("사용자")
 	end)
-	local circleStamp = button(tools, "Circle", UDim2.fromOffset(62, 36), UDim2.fromOffset(716, 8), Color3.fromRGB(255, 156, 56))
+	local circleStamp = button(tools, "Round", UDim2.fromOffset(72, 36), UDim2.fromOffset(1178, 8), Color3.fromRGB(255, 156, 56))
 	circleStamp.MouseButton1Click:Connect(function()
 		self.canvasController:setStampType("circle")
 	end)
-	local squareStamp = button(tools, "Square", UDim2.fromOffset(64, 36), UDim2.fromOffset(784, 8), Color3.fromRGB(255, 156, 56))
+	local squareStamp = button(tools, "Square", UDim2.fromOffset(72, 36), UDim2.fromOffset(1256, 8), Color3.fromRGB(255, 156, 56))
 	squareStamp.MouseButton1Click:Connect(function()
 		self.canvasController:setStampType("square")
 	end)
@@ -293,6 +368,7 @@ function UIController:build()
 	end)
 
 	self.canvasController = CanvasController.new(self.canvas, self.remotes)
+	self.canvasController:applyPreset("marker")
 	self.canvasController:bind()
 
 	local camera = workspace.CurrentCamera
@@ -338,6 +414,16 @@ function UIController:build()
 	applyResponsiveLayout()
 	if camera then
 		camera:GetPropertyChangedSignal("ViewportSize"):Connect(applyResponsiveLayout)
+	end
+end
+
+function UIController:setCanvasPanelOpen(open: boolean)
+	self.canvasPanelOpen = open
+	if self.canvasPanel then
+		self.canvasPanel.Visible = open
+	end
+	if self.openCanvasButton then
+		self.openCanvasButton.Visible = not open
 	end
 end
 
@@ -636,6 +722,9 @@ function UIController:onState(payload)
 		self.roundBadge.Text = ""
 	end
 	local isArtist = payload.artistUserId == self.player.UserId
+	if payload.state == "Drawing" and isArtist and previousState ~= "Drawing" then
+		self:setCanvasPanelOpen(true)
+	end
 	self.canvasController:setEnabled(payload.state == "Drawing" and isArtist, payload.mode)
 	self.guessBox.Visible = payload.state == "Drawing" and not isArtist
 	self.reactions.Visible = payload.state == "Reveal"

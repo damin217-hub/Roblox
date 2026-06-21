@@ -28,12 +28,9 @@ if ($LASTEXITCODE -ne 0) { throw "Selene failed." }
 
 & $rojo.FullName build "$root\all-ages.project.json" -o "$root\build\ArtAcademy-AllAges.rbxlx"
 if ($LASTEXITCODE -ne 0) { throw "All Ages build failed." }
-& $rojo.FullName build "$root\free-draw.project.json" -o "$root\build\ArtAcademy-FreeDraw16Plus.rbxlx"
-if ($LASTEXITCODE -ne 0) { throw "Free Draw build failed." }
 
 $targets = @(
-    @{ Name = "all-ages"; Place = "$root\build\ArtAcademy-AllAges.rbxlx"; Output = "$root\build\studio-smoke-all-ages.log" },
-    @{ Name = "free-draw"; Place = "$root\build\ArtAcademy-FreeDraw16Plus.rbxlx"; Output = "$root\build\studio-smoke-free-draw.log" }
+    @{ Name = "all-ages"; Place = "$root\build\ArtAcademy-AllAges.rbxlx"; Output = "$root\build\studio-smoke-all-ages.log" }
 )
 
 $launchedProcesses = @()
@@ -46,7 +43,7 @@ if ($RunStudio) {
 }
 
 if (-not $RunStudio) {
-    Write-Host "Static verification complete. Use -RunStudio to run the eight hidden Studio checks."
+    Write-Host "Static verification complete. Use -RunStudio to run the four hidden Studio suites."
     return
 }
 
