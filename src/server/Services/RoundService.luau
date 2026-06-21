@@ -24,6 +24,22 @@ local readyPlayers = {}
 local matchPlayers = {}
 local currentRound = 0
 
+local function hintForPrompt(activePrompt, remaining)
+	if not activePrompt or remaining > Config.DRAWING_HINT_FIRST_SECONDS then return nil end
+	local word = string.upper(activePrompt.en or "")
+	local revealSecond = remaining <= Config.DRAWING_HINT_SECOND_SECONDS
+	local result = {}
+	for index = 1, #word do
+		local character = string.sub(word, index, index)
+		if character == " " or index == 1 or (revealSecond and index % 2 == 1) then
+			table.insert(result, character)
+		else
+			table.insert(result, "_")
+		end
+	end
+	return table.concat(result, " ")
+end
+
 local function isFastStudioTest(): boolean
 	return RunService:IsStudio() and game:GetAttribute("ArtAcademyFastScenarioTest") == true
 end
@@ -115,7 +131,12 @@ end
 
 local function countdown(seconds: number, extra, breaker)
 	for remaining = seconds, 0, -1 do
-		broadcast(remaining, extra)
+		local tickExtra = extra
+		if state == "Drawing" and prompt then
+			tickExtra = table.clone(extra or {})
+			tickExtra.hint = hintForPrompt(prompt, remaining)
+		end
+		broadcast(remaining, tickExtra)
 		if breaker and breaker() then break end
 		if not isFastStudioTest() then
 			task.wait(1)

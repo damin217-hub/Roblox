@@ -21,4 +21,7 @@ return table.freeze({
 	"QuestData",
 	"ModerateGallery",
 	"PurchasePremium",
+	"ShareDrawingBubble",
+	"DrawingBubbleBroadcast",
+	"ReportDrawingBubble",
 })

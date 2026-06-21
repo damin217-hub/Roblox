@@ -14,6 +14,7 @@ local QuestService = require(services.QuestService)
 local GalleryService = require(services.GalleryService)
 local MonetizationService = require(services.MonetizationService)
 local TelemetryService = require(services.TelemetryService)
+local DrawingBubbleService = require(services.DrawingBubbleService)
 
 local modeValue = ServerScriptService:FindFirstChild("ExperienceMode")
 local experienceMode = modeValue and modeValue.Value or "ALL_AGES"
@@ -257,6 +258,23 @@ remotes.PurchasePremium.OnServerEvent:Connect(function(player, productType)
 	end
 	if not MonetizationService.prompt(player, tostring(productType)) then
 		remotes.Toast:FireClient(player, "Premium product is not configured yet.")
+	end
+end)
+
+remotes.ShareDrawingBubble.OnServerEvent:Connect(function(player, strokes)
+	local payload = DrawingBubbleService.submit(player, strokes)
+	if payload then
+		remotes.DrawingBubbleBroadcast:FireAllClients(payload)
+		TelemetryService.log(player, "drawing_bubble_shared", 1, { strokes = #payload.strokes })
+	else
+		remotes.Toast:FireClient(player, "Please wait before sharing another drawing. / 잠시 후 다시 공유하세요.")
+	end
+end)
+
+remotes.ReportDrawingBubble.OnServerEvent:Connect(function(player, bubbleId, ownerUserId)
+	local owner = Players:GetPlayerByUserId(tonumber(ownerUserId) or 0)
+	if DrawingBubbleService.report(player, tostring(bubbleId), owner) then
+		remotes.Toast:FireClient(player, "Drawing bubble reported and hidden. / 그림 말풍선을 신고했습니다.")
 	end
 end)
 

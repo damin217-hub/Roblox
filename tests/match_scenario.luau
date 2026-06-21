@@ -28,6 +28,8 @@ local guesserNeverReceivedPrompt = true
 local artistAlwaysReceivedChoices = true
 local guesserNeverReceivedChoices = true
 local playerDataSyncs = {}
+local sawFirstHint = false
+local sawSecondHint = false
 
 local remotes = {
 	RoundState = {
@@ -63,6 +65,12 @@ local remotes = {
 				if payload.prompt ~= nil then
 					guesserNeverReceivedPrompt = false
 				end
+				if payload.seconds <= Config.DRAWING_HINT_FIRST_SECONDS and payload.hint then
+					sawFirstHint = true
+				end
+				if payload.seconds <= Config.DRAWING_HINT_SECOND_SECONDS and payload.hint and string.find(payload.hint, "_") then
+					sawSecondHint = true
+				end
 				hiddenPromptDeliveries += 1
 			end
 		end,
@@ -96,6 +104,8 @@ check(#drawingArtists == Config.ROUNDS_PER_MATCH, "all five drawing rounds start
 check(hiddenPromptDeliveries > 0, "drawing prompt privacy is exercised during the match")
 check(artistAlwaysReceivedPrompt, "artist receives the private drawing prompt")
 check(guesserNeverReceivedPrompt, "guesser never receives the private drawing prompt")
+check(sawFirstHint, "guessers receive a progressive first-letter hint")
+check(sawSecondHint, "guessers receive a stronger late-round hint")
 check(artistAlwaysReceivedChoices, "artist receives private prompt choices")
 check(guesserNeverReceivedChoices, "guesser never receives prompt choices")
 for roundNumber, artistUserId in drawingArtists do

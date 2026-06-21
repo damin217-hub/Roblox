@@ -389,13 +389,17 @@ function CanvasController:bind()
 		end
 	end)
 
-	self.remotes.StrokeBroadcast.OnClientEvent:Connect(function(stroke)
-		self:_render(stroke)
-	end)
-	self.remotes.CanvasCommand.OnClientEvent:Connect(function(command)
-		if command.command == "clear" then self:clear() end
-		if command.command == "undo" then self:undo(command.id) end
-	end)
+	if self.remotes.StrokeBroadcast then
+		self.remotes.StrokeBroadcast.OnClientEvent:Connect(function(stroke)
+			self:_render(stroke)
+		end)
+	end
+	if self.remotes.CanvasCommand then
+		self.remotes.CanvasCommand.OnClientEvent:Connect(function(command)
+			if command.command == "clear" then self:clear() end
+			if command.command == "undo" then self:undo(command.id) end
+		end)
+	end
 end
 
 CanvasController.COLORS = COLORS

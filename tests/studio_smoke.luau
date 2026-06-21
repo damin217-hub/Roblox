@@ -34,6 +34,7 @@ for _, serviceName in {
 	"MonetizationService",
 	"TelemetryService",
 	"MapService",
+	"DrawingBubbleService",
 } do
 	check(services:FindFirstChild(serviceName) ~= nil, serviceName .. " exists")
 end
@@ -48,6 +49,7 @@ local QuestService = require(services.QuestService)
 local StrokeCodec = require(shared.StrokeCodec)
 local PlayerDataService = require(services.PlayerDataService)
 local ModerationService = require(services.ModerationService)
+local DrawingBubbleService = require(services.DrawingBubbleService)
 
 check(Config.ROUNDS_PER_MATCH == 5, "match contains five rounds")
 check(Config.DRAWING_SECONDS == 75, "drawing timer is 75 seconds")
@@ -118,6 +120,16 @@ check(questData[1].progress == 3, "daily quest progress is calculated")
 check(questData[3].scope == "weekly" and questData[3].progress == 10, "weekly quest progress is calculated")
 check(type(PlayerDataService.retryPending) == "function", "failed DataStore writes have a retry queue")
 check(type(PlayerDataService.getPendingSaveCount) == "function", "pending save queue is observable for shutdown flush")
+
+local bubblePlayer = { UserId = 44001 }
+local bubblePayload = DrawingBubbleService.submit(bubblePlayer, {
+	{
+		x = 0.3, y = 0.3, px = 0.2, py = 0.2, size = 8,
+		color = { r = 1, g = 0, b = 0 }, opacity = 0.8, stampType = "circle",
+	},
+})
+check(bubblePayload ~= nil and #bubblePayload.strokes == 1, "validated social drawing can become a drawing bubble")
+check(DrawingBubbleService.submit(bubblePlayer, bubblePayload.strokes) == nil, "drawing bubble sharing is cooldown limited")
 
 local reconnectA = { UserId = 88001 }
 local reconnectB = { UserId = 88001 }
@@ -226,8 +238,10 @@ check(clientFolder ~= nil, "client controller folder exists")
 local CanvasController = require(clientFolder.CanvasController)
 local UIController = require(clientFolder.UIController)
 local SoundController = require(clientFolder.SoundController)
+local DrawingBubbleController = require(clientFolder.DrawingBubbleController)
 check(type(UIController.new) == "function", "responsive UI controller module loads")
 check(type(SoundController.new) == "function", "UI sound controller module loads")
+check(type(DrawingBubbleController.new) == "function", "drawing bubble controller module loads")
 local testCanvas = Instance.new("Frame")
 testCanvas.Size = UDim2.fromOffset(900, 600)
 local canvasController = CanvasController.new(testCanvas, {})
@@ -287,6 +301,10 @@ uiController:setCanvasPanelOpen(false)
 check(not uiController.canvasPanel.Visible and uiController.openCanvasButton.Visible, "canvas panel can be minimized without hiding the game")
 uiController:setCanvasPanelOpen(true)
 check(uiController.canvasPanel.Visible and not uiController.openCanvasButton.Visible, "canvas panel can be restored")
+uiController:_openDrawingBubbleComposer()
+check(uiController.bubbleComposerController ~= nil, "drawing bubble composer opens with a local canvas")
+check(uiController.modal.Visible, "drawing bubble composer uses the modal workspace")
+uiController.modal.Visible = false
 uiController.applyResponsiveLayout(600)
 check(not uiController.title.Visible, "mobile layout hides the wide title")
 check(uiController.canvas.AbsoluteSize.X >= 0, "mobile layout keeps the canvas mounted")

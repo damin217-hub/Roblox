@@ -59,6 +59,7 @@ function UIController.new(remotes, playerOverride, localeOverride)
 	self.galleryData = { approved = {}, pending = {}, isAdmin = false }
 	self.colorButtons = {}
 	self.galleryCanvasController = nil
+	self.bubbleComposerController = nil
 	self.hasShownTutorial = false
 	self.lastRoundId = ""
 	self.canvasPanelOpen = true
@@ -246,6 +247,17 @@ function UIController:build()
 	self.feed = text(side, "", UDim2.new(1, -20, 0.25, 0), UDim2.new(0, 10, 0.4, 0), 15, false)
 	self.feed.TextYAlignment = Enum.TextYAlignment.Bottom
 	self.feed.TextColor3 = Color3.fromRGB(70, 72, 90)
+
+	local bubbleShare = button(
+		side,
+		"그림 말풍선 / Draw Bubble",
+		UDim2.new(1, -20, 0, 36),
+		UDim2.new(0, 10, 0.585, 0),
+		Color3.fromRGB(112, 83, 245)
+	)
+	bubbleShare.MouseButton1Click:Connect(function()
+		self:_openDrawingBubbleComposer()
+	end)
 
 	local reactions = Instance.new("Frame")
 	reactions.Size = UDim2.new(1, -20, 0, 38)
@@ -496,11 +508,96 @@ function UIController:_clearModal()
 		self.galleryCanvasController:destroy()
 		self.galleryCanvasController = nil
 	end
+	if self.bubbleComposerController then
+		self.bubbleComposerController:destroy()
+		self.bubbleComposerController = nil
+	end
 	for _, child in self.modalList:GetChildren() do
 		if not child:IsA("UIListLayout") then
 			child:Destroy()
 		end
 	end
+end
+
+function UIController:_openDrawingBubbleComposer()
+	self:_clearModal()
+	self.modalTitle.Text = "그림 말풍선 / Drawing Bubble"
+
+	local composer = Instance.new("Frame")
+	composer.Size = UDim2.new(1, -8, 0, 390)
+	composer.BackgroundColor3 = Color3.fromRGB(244, 242, 250)
+	composer.ZIndex = 61
+	composer.Parent = self.modalList
+	corner(composer, 14)
+
+	local canvas = Instance.new("Frame")
+	canvas.Name = "BubbleCanvas"
+	canvas.Size = UDim2.new(1, -28, 0, 260)
+	canvas.Position = UDim2.fromOffset(14, 14)
+	canvas.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	canvas.ClipsDescendants = true
+	canvas.Active = true
+	canvas.ZIndex = 62
+	canvas.Parent = composer
+	corner(canvas, 12)
+
+	local localId = 0
+	local localController
+	localController = CanvasController.new(canvas, {
+		SubmitStroke = {
+			FireServer = function(_, payload)
+				localId += 1
+				payload.id = localId
+				localController:_render(payload)
+			end,
+		},
+	})
+	localController:applyPreset("fine")
+	localController:setEnabled(true, "ALL_AGES")
+	localController:bind()
+	self.bubbleComposerController = localController
+
+	for index, color in CanvasController.COLORS do
+		local colorButton = Instance.new("TextButton")
+		colorButton.Text = ""
+		colorButton.Size = UDim2.fromOffset(30, 30)
+		colorButton.Position = UDim2.fromOffset(14 + (index - 1) * 36, 286)
+		colorButton.BackgroundColor3 = color
+		colorButton.ZIndex = 63
+		colorButton.Parent = composer
+		corner(colorButton, 15)
+		colorButton.MouseButton1Click:Connect(function()
+			localController:setColor(color)
+		end)
+	end
+
+	local clearBubble = button(composer, "지우기 / Clear", UDim2.fromOffset(120, 42), UDim2.new(0, 14, 1, -58), Color3.fromRGB(93, 100, 120))
+	clearBubble.ZIndex = 63
+	clearBubble.MouseButton1Click:Connect(function()
+		localId = 0
+		localController:clear()
+	end)
+	local shareBubble = button(composer, "공유 / Share", UDim2.fromOffset(150, 42), UDim2.new(1, -164, 1, -58), Color3.fromRGB(255, 116, 139))
+	shareBubble.ZIndex = 63
+	shareBubble.MouseButton1Click:Connect(function()
+		if #localController.strokes > 0 then
+			local safeStrokes = {}
+			for index, stroke in localController.strokes do
+				if index > 80 then break end
+				table.insert(safeStrokes, {
+					x = stroke.x, y = stroke.y, px = stroke.px, py = stroke.py,
+					size = stroke.size,
+					opacity = stroke.opacity,
+					color = stroke.color,
+					erase = stroke.erase,
+					stampType = stroke.stampType,
+				})
+			end
+			self.remotes.ShareDrawingBubble:FireServer(safeStrokes)
+			self.modal.Visible = false
+		end
+	end)
+	self.modal.Visible = true
 end
 
 function UIController:_refreshPalette()
@@ -752,7 +849,8 @@ function UIController:onState(payload)
 		if isArtist or payload.state == "Reveal" then
 			self.prompt.Text = payload.prompt.ko .. "  •  " .. payload.prompt.en
 		else
-			self.prompt.Text = payload.artistName .. " is drawing..."
+			local hint = payload.hint and ("  •  Hint: " .. payload.hint) or ""
+			self.prompt.Text = payload.artistName .. " is drawing..." .. hint
 		end
 	else
 		self.prompt.Text = payload.artistName ~= "" and ("Artist: " .. payload.artistName) or ""

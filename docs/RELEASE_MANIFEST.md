@@ -4,16 +4,16 @@
 
 | Experience | File | 상태 |
 |---|---|---|
-| All Ages | `build/ArtAcademy-AllAges.rbxlx` | `18A9D180E6AAAEEF6F67A696CA2F62EEF0FAB0380F560933558090B8C54509C7` |
+| All Ages | `build/ArtAcademy-AllAges.rbxlx` | `84A82766685EC4EC6339B58C870E0FD99D73808868020BC732DA8C7DB175128F` |
 
 릴리스 ZIP은 실제 PC·모바일·멀티플레이 QA가 모두 통과할 때만 다시 생성합니다.
 
 ## 자동 검증
 
 - Selene: 오류 0, 경고 0, 파싱 오류 0
-- Studio 스모크: 128개 통과
-- 런타임 부팅: 28개 통과
-- 12인 5라운드 전체 매치: 33개 통과
+- Studio 스모크: 134개 통과
+- 런타임 부팅: 31개 통과
+- 12인 5라운드 전체 매치: 35개 통과
 - 출제자 중도 이탈 복구: 15개 통과
 
 ## 배포 전 필수 설정
