@@ -165,6 +165,10 @@ check(map:FindFirstChild("GalleryHall") ~= nil, "gallery has a dedicated academy
 check(map:FindFirstChild("OutdoorGalleryFrames") ~= nil, "lobby includes gallery scenery for waiting players")
 check(map:FindFirstChild("MainPlaza") ~= nil, "central play zone has a dedicated visual foundation")
 check(map:FindFirstChild("MainPlazaRing") ~= nil, "central play zone is emphasized with a plaza ring")
+check(map:FindFirstChild("DesignAxes") ~= nil, "map exposes a single shared design-axis system")
+check(map.DesignAxes:FindFirstChild("PrimaryAxis") ~= nil, "spawn-to-portal primary axis is defined")
+check(map.DesignAxes:FindFirstChild("CrossAxis") ~= nil, "plaza cross axis is defined")
+check(map:GetAttribute("CenterX") == 0 and map:GetAttribute("CenterZ") == 4, "all map composition uses the portal world center")
 check(Lighting.Brightness < 2, "lobby lighting avoids an over-bright global exposure")
 check(Lighting.ClockTime >= 16, "lobby uses a calmer late-afternoon lighting direction")
 for _, buildingName in { "TutorialClassroom", "PaletteShop", "MissionStudio", "GalleryHall" } do
@@ -172,6 +176,21 @@ for _, buildingName in { "TutorialClassroom", "PaletteShop", "MissionStudio", "G
 	local canopy = building and building:FindFirstChild("Canopy")
 	local toPlaza = canopy and (Vector3.new(0, canopy.Position.Y, 4) - canopy.Position).Unit or Vector3.zero
 	check(canopy ~= nil and canopy.CFrame.LookVector:Dot(toPlaza) > 0.7, buildingName .. " entrance faces the central plaza")
+end
+
+local npcDefinitions = {
+	{ "큐레이터 모모 / Curator Momo", "Sketchbook", "Paintbrush" },
+	{ "팔레트 상인 / Palette Merchant", "Palette", "PaletteColor_1" },
+	{ "미션 선생님 / Mission Teacher", "Clipboard", "MissionSheet" },
+	{ "갤러리 관리자 / Gallery Keeper", "MiniFrame", "GalleryKey" },
+}
+for _, definition in npcDefinitions do
+	local character = map:FindFirstChild(definition[1])
+	local body = character and character:FindFirstChild("Body")
+	local toCenter = body and (Vector3.new(0, body.Position.Y, 4) - body.Position).Unit or Vector3.zero
+	check(body ~= nil and body.CFrame.LookVector:Dot(toCenter) > 0.92, definition[1] .. " faces the shared world center")
+	check(character:FindFirstChild(definition[2]) ~= nil, definition[1] .. " has its first role prop")
+	check(character:FindFirstChild(definition[3]) ~= nil, definition[1] .. " has its second role prop")
 end
 
 local waitingSeatCount = 0

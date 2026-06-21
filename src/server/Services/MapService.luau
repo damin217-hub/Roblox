@@ -2,6 +2,10 @@ local Lighting = game:GetService("Lighting")
 
 local MapService = {}
 
+local WORLD_CENTER = Vector3.new(0, 0, 4)
+local MAIN_AXIS_ORIGIN = Vector3.new(0, 0, 70)
+local MAIN_AXIS_DIRECTION = (WORLD_CENTER - MAIN_AXIS_ORIGIN).Unit
+
 local COLORS = {
 	ink = Color3.fromRGB(46, 42, 68),
 	violet = Color3.fromRGB(112, 83, 245),
@@ -44,6 +48,18 @@ local function cylinder(parent, name, size, cf, color, material)
 	local item = part(parent, name, size, cf, color, material)
 	item.Shape = Enum.PartType.Cylinder
 	return item
+end
+
+local function facingCFrame(position, target)
+	local flatTarget = Vector3.new(target.X, position.Y, target.Z)
+	if (flatTarget - position).Magnitude < 0.001 then
+		flatTarget = position + Vector3.new(0, 0, -1)
+	end
+	return CFrame.lookAt(position, flatTarget)
+end
+
+local function localPart(parent, name, size, baseCf, offset, color, material)
+	return part(parent, name, size, baseCf * CFrame.new(offset), color, material)
 end
 
 local function cornerLight(parent, position, color, brightness, range)
@@ -190,11 +206,12 @@ local function paintSculpture(parent, position)
 end
 
 local function floorSign(parent, name, position, color, titleText)
+	local cf = facingCFrame(position, WORLD_CENTER)
 	local pad = part(
 		parent,
 		name,
 		Vector3.new(15, 0.4, 10),
-		CFrame.new(position),
+		cf,
 		color,
 		Enum.Material.SmoothPlastic
 	)
@@ -203,28 +220,88 @@ local function floorSign(parent, name, position, color, titleText)
 	return pad
 end
 
-local function npc(parent, name, position, color, actionText)
+local function addNpcProp(model, role, baseCf, accent)
+	if role == "curator" then
+		local book = localPart(model, "Sketchbook", Vector3.new(2.4, 3, 0.35), baseCf, Vector3.new(2.25, 3.15, -0.55), COLORS.cream)
+		book.CFrame *= CFrame.Angles(0, 0, math.rad(-12))
+		local brush = localPart(model, "Paintbrush", Vector3.new(0.28, 4.6, 0.28), baseCf, Vector3.new(-2.25, 4.2, -0.55), COLORS.gold, Enum.Material.Wood)
+		brush.CFrame *= CFrame.Angles(0, 0, math.rad(18))
+		local tip = localPart(model, "BrushTip", Vector3.new(0.55, 1.1, 0.55), brush.CFrame, Vector3.new(0, 2.3, 0), COLORS.coral)
+		tip.CanCollide = false
+	elseif role == "merchant" then
+		local palette = localPart(model, "Palette", Vector3.new(2.8, 0.45, 2.1), baseCf, Vector3.new(2.1, 3.2, -0.65), COLORS.wood, Enum.Material.Wood)
+		palette.CFrame *= CFrame.Angles(math.rad(72), 0, math.rad(-10))
+		for index, dotColor in { COLORS.coral, COLORS.cyan, COLORS.gold, COLORS.lilac } do
+			local dot = ball(
+				model,
+				"PaletteColor_" .. index,
+				Vector3.new(0.45, 0.45, 0.45),
+				(palette.CFrame * CFrame.new(-0.8 + (index - 1) * 0.52, 0.3, -0.15)).Position,
+				dotColor
+			)
+			dot.CanCollide = false
+		end
+	elseif role == "teacher" then
+		local board = localPart(model, "Clipboard", Vector3.new(2.5, 3.2, 0.35), baseCf, Vector3.new(2.15, 3.1, -0.65), Color3.fromRGB(105, 78, 64), Enum.Material.Wood)
+		board.CFrame *= CFrame.Angles(0, 0, math.rad(-8))
+		local paper = localPart(model, "MissionSheet", Vector3.new(2.05, 2.55, 0.08), board.CFrame, Vector3.new(0, 0, -0.22), COLORS.cream)
+		paper.CanCollide = false
+		local badge = ball(model, "TeacherBadge", Vector3.new(0.65, 0.65, 0.25), (baseCf * CFrame.new(-0.72, 4, -1.15)).Position, COLORS.gold)
+		badge.CanCollide = false
+	elseif role == "gallery" then
+		local frame = localPart(model, "MiniFrame", Vector3.new(2.7, 3.2, 0.35), baseCf, Vector3.new(2.2, 3.2, -0.65), COLORS.gold, Enum.Material.Wood)
+		frame.CFrame *= CFrame.Angles(0, 0, math.rad(-8))
+		local canvas = localPart(model, "MiniArtwork", Vector3.new(2.1, 2.55, 0.12), frame.CFrame, Vector3.new(0, 0, -0.24), accent)
+		canvas.CanCollide = false
+		local key = localPart(model, "GalleryKey", Vector3.new(0.3, 2.4, 0.3), baseCf, Vector3.new(-2.2, 3.1, -0.65), COLORS.gold, Enum.Material.Metal)
+		key.CFrame *= CFrame.Angles(0, 0, math.rad(20))
+	end
+end
+
+local function npc(parent, name, position, color, actionText, role)
 	local model = Instance.new("Model")
 	model.Name = name
 	model.Parent = parent
-	local frontZ = position.Z < 0 and 1 or -1
+	local baseCf = facingCFrame(position, WORLD_CENTER)
+	model:SetAttribute("FacesWorldCenter", true)
+	model:SetAttribute("Role", role or "academy")
 
-	local body = part(model, "Body", Vector3.new(3.2, 4.2, 2.1), CFrame.new(position + Vector3.new(0, 3.1, 0)), color)
-	part(model, "Apron", Vector3.new(2.7, 2.7, 0.25), CFrame.new(position + Vector3.new(0, 2.75, frontZ * 1.15)), COLORS.cream)
-	part(model, "LeftArm", Vector3.new(1, 3.6, 1), CFrame.new(position + Vector3.new(-2.05, 3.25, 0)), Color3.fromRGB(255, 220, 184))
-	part(model, "RightArm", Vector3.new(1, 3.6, 1), CFrame.new(position + Vector3.new(2.05, 3.25, 0)), Color3.fromRGB(255, 220, 184))
-	part(model, "LeftLeg", Vector3.new(1.2, 2.4, 1.4), CFrame.new(position + Vector3.new(-0.85, 0.9, 0)), COLORS.ink)
-	part(model, "RightLeg", Vector3.new(1.2, 2.4, 1.4), CFrame.new(position + Vector3.new(0.85, 0.9, 0)), COLORS.ink)
+	local body = localPart(model, "Body", Vector3.new(3.4, 4.3, 2.2), baseCf, Vector3.new(0, 3.1, 0), color)
+	local coat = localPart(model, "AcademyCoat", Vector3.new(3.65, 2.2, 2.35), baseCf, Vector3.new(0, 3.75, 0.05), COLORS.ink)
+	coat.CanCollide = false
+	local apron = localPart(model, "Apron", Vector3.new(2.75, 2.75, 0.25), baseCf, Vector3.new(0, 2.7, -1.18), COLORS.cream)
+	apron.CanCollide = false
+	local belt = localPart(model, "AccentBelt", Vector3.new(3, 0.35, 0.28), baseCf, Vector3.new(0, 2.25, -1.22), color)
+	belt.CanCollide = false
+	local leftArm = localPart(model, "LeftArm", Vector3.new(1, 3.6, 1), baseCf, Vector3.new(-2.05, 3.35, 0), Color3.fromRGB(238, 198, 164))
+	leftArm.CFrame *= CFrame.Angles(0, 0, math.rad(-7))
+	local rightArm = localPart(model, "RightArm", Vector3.new(1, 3.6, 1), baseCf, Vector3.new(2.05, 3.35, 0), Color3.fromRGB(238, 198, 164))
+	rightArm.CFrame *= CFrame.Angles(0, 0, math.rad(7))
+	localPart(model, "LeftLeg", Vector3.new(1.25, 2.5, 1.45), baseCf, Vector3.new(-0.88, 0.9, 0), COLORS.ink)
+	localPart(model, "RightLeg", Vector3.new(1.25, 2.5, 1.45), baseCf, Vector3.new(0.88, 0.9, 0), COLORS.ink)
+	localPart(model, "LeftShoe", Vector3.new(1.35, 0.65, 1.85), baseCf, Vector3.new(-0.88, -0.15, -0.18), Color3.fromRGB(31, 30, 43))
+	localPart(model, "RightShoe", Vector3.new(1.35, 0.65, 1.85), baseCf, Vector3.new(0.88, -0.15, -0.18), Color3.fromRGB(31, 30, 43))
 
-	local head = ball(model, "Head", Vector3.new(2.6, 2.6, 2.6), position + Vector3.new(0, 6.4, 0), Color3.fromRGB(255, 220, 184))
-	local hat = cylinder(model, "Beret", Vector3.new(2.9, 0.65, 2.9), CFrame.new(position + Vector3.new(0, 7.65, 0)), color)
-	hat.Orientation = Vector3.new(0, 0, 90)
+	local headPosition = (baseCf * CFrame.new(0, 6.45, 0)).Position
+	local head = ball(model, "Head", Vector3.new(2.75, 2.75, 2.75), headPosition, Color3.fromRGB(238, 198, 164))
+	local hair = localPart(model, "Hair", Vector3.new(2.9, 1.4, 2.85), baseCf, Vector3.new(0, 7.05, 0.35), Color3.fromRGB(62, 42, 54))
+	hair.Shape = Enum.PartType.Ball
+	cylinder(
+		model,
+		"Beret",
+		Vector3.new(3.15, 0.7, 3.15),
+		baseCf * CFrame.new(0, 7.85, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color
+	)
 	for _, x in { -0.48, 0.48 } do
-		local eye = ball(model, "Eye", Vector3.new(0.24, 0.24, 0.24), position + Vector3.new(x, 6.55, frontZ * 1.28), COLORS.ink)
+		local eye = ball(model, "Eye", Vector3.new(0.25, 0.25, 0.25), (baseCf * CFrame.new(x, 6.55, -1.34)).Position, COLORS.ink)
 		eye.CanCollide = false
 	end
-	local smile = part(model, "Smile", Vector3.new(0.8, 0.12, 0.12), CFrame.new(position + Vector3.new(0, 5.95, frontZ * 1.32)), COLORS.coral)
+	local nose = ball(model, "Nose", Vector3.new(0.18, 0.18, 0.18), (baseCf * CFrame.new(0, 6.25, -1.38)).Position, Color3.fromRGB(220, 160, 145))
+	nose.CanCollide = false
+	local smile = localPart(model, "Smile", Vector3.new(0.82, 0.13, 0.13), baseCf, Vector3.new(0, 5.92, -1.39), COLORS.coral)
 	smile.CanCollide = false
+	addNpcProp(model, role, baseCf, color)
 	label(head, name, COLORS.white, 280, 64, Vector3.new(0, 4.5, 0))
 
 	local prompt = Instance.new("ProximityPrompt")
@@ -243,11 +320,13 @@ local function academyWing(parent, name, center, accent, titleText, lookAt)
 	model.Parent = parent
 	local target = lookAt or Vector3.new(0, center.Y, 4)
 	local cf = CFrame.lookAt(center, Vector3.new(target.X, center.Y, target.Z))
+	model:SetAttribute("FacesWorldCenter", true)
 	part(model, "Foundation", Vector3.new(28, 1.2, 22), cf * CFrame.new(0, 0.6, 0), COLORS.cream, Enum.Material.Marble)
 	part(model, "BackWall", Vector3.new(28, 12, 1.2), cf * CFrame.new(0, 6.5, 10.4), Color3.fromRGB(198, 194, 211), Enum.Material.SmoothPlastic)
 	part(model, "LeftWall", Vector3.new(1.2, 9, 21), cf * CFrame.new(-13.4, 5, 0), Color3.fromRGB(198, 194, 211))
 	part(model, "RightWall", Vector3.new(1.2, 9, 21), cf * CFrame.new(13.4, 5, 0), Color3.fromRGB(198, 194, 211))
 	part(model, "Roof", Vector3.new(30, 1.2, 24), cf * CFrame.new(0, 13, 0), accent, Enum.Material.SmoothPlastic)
+	part(model, "RoofTrim", Vector3.new(31, 0.35, 25), cf * CFrame.new(0, 12.25, 0), COLORS.gold, Enum.Material.Metal)
 	part(model, "Canopy", Vector3.new(22, 0.75, 6), cf * CFrame.new(0, 9.7, -11), accent, Enum.Material.SmoothPlastic)
 	for x = -10, 10, 5 do
 		local stripe = part(
@@ -271,11 +350,30 @@ local function academyWing(parent, name, center, accent, titleText, lookAt)
 		)
 		window.Transparency = 0.25
 		window.CanCollide = false
+		part(model, "WindowTopTrim", Vector3.new(4.7, 0.25, 0.35), cf * CFrame.new(x, 9.5, 9.5), COLORS.gold, Enum.Material.Metal)
+		part(model, "WindowBottomTrim", Vector3.new(4.7, 0.25, 0.35), cf * CFrame.new(x, 4.5, 9.5), COLORS.gold, Enum.Material.Metal)
 	end
+	for _, x in { -11.1, 11.1 } do
+		part(model, "FacadeColumn", Vector3.new(1.2, 10, 1.2), cf * CFrame.new(x, 5.5, -9.5), COLORS.gold, Enum.Material.Marble)
+		part(model, "FacadeColumnFoot", Vector3.new(2, 0.8, 2), cf * CFrame.new(x, 0.9, -9.5), COLORS.plazaDark, Enum.Material.Marble)
+	end
+	for step = 1, 3 do
+		part(
+			model,
+			"EntranceStep_" .. step,
+			Vector3.new(18 - step * 2, 0.35, 2.4),
+			cf * CFrame.new(0, 0.25 + step * 0.3, -11.2 - step * 1.35),
+			step == 3 and accent or COLORS.plaza,
+			Enum.Material.Marble
+		)
+	end
+	part(model, "DoorHeader", Vector3.new(8, 1, 1), cf * CFrame.new(0, 8.3, -10), COLORS.gold, Enum.Material.Metal)
+	part(model, "DoorLeft", Vector3.new(1, 7.5, 1), cf * CFrame.new(-4, 4.3, -10), COLORS.gold, Enum.Material.Metal)
+	part(model, "DoorRight", Vector3.new(1, 7.5, 1), cf * CFrame.new(4, 4.3, -10), COLORS.gold, Enum.Material.Metal)
 	local sign = part(model, "WingSign", Vector3.new(18, 3.4, 0.55), cf * CFrame.new(0, 11.2, -12.1), COLORS.ink)
 	surfaceLabel(sign, titleText, COLORS.white)
-	cornerLight(model, center + Vector3.new(-10, 10.5, -9.5), accent, 1.25, 18)
-	cornerLight(model, center + Vector3.new(10, 10.5, -9.5), accent, 1.25, 18)
+	cornerLight(model, (cf * CFrame.new(-10, 10.5, -9.5)).Position, accent, 1.1, 16)
+	cornerLight(model, (cf * CFrame.new(10, 10.5, -9.5)).Position, accent, 1.1, 16)
 	return model
 end
 
@@ -376,6 +474,34 @@ function MapService.build()
 	local map = Instance.new("Folder")
 	map.Name = "ArtAcademyMap"
 	map.Parent = workspace
+	map:SetAttribute("CenterX", WORLD_CENTER.X)
+	map:SetAttribute("CenterZ", WORLD_CENTER.Z)
+	map:SetAttribute("MainAxisX", MAIN_AXIS_DIRECTION.X)
+	map:SetAttribute("MainAxisZ", MAIN_AXIS_DIRECTION.Z)
+
+	local axes = Instance.new("Folder")
+	axes.Name = "DesignAxes"
+	axes.Parent = map
+	local primaryAxis = part(
+		axes,
+		"PrimaryAxis",
+		Vector3.new(1.2, 0.12, 132),
+		facingCFrame(Vector3.new(0, 1.18, 4), MAIN_AXIS_ORIGIN),
+		Color3.fromRGB(179, 157, 235),
+		Enum.Material.Neon
+	)
+	primaryAxis.Transparency = 0.55
+	primaryAxis.CanCollide = false
+	local crossAxis = part(
+		axes,
+		"CrossAxis",
+		Vector3.new(112, 0.1, 0.8),
+		CFrame.new(0, 1.16, 4),
+		Color3.fromRGB(129, 181, 203),
+		Enum.Material.Neon
+	)
+	crossAxis.Transparency = 0.72
+	crossAxis.CanCollide = false
 
 	part(map, "WorldBase", Vector3.new(190, 3, 170), CFrame.new(0, -2.2, 2), COLORS.ground, Enum.Material.Grass)
 	part(map, "Floor", Vector3.new(160, 2, 140), CFrame.new(0, -1, 0), Color3.fromRGB(82, 79, 101), Enum.Material.Slate)
@@ -533,10 +659,38 @@ function MapService.build()
 	floorSign(map, "MissionZone", plazaFacingPoint(missionCenter, 12) + Vector3.new(0, 0.8, 0), COLORS.mint, "MISSIONS / 미션")
 	floorSign(map, "GalleryZone", plazaFacingPoint(galleryCenter, 12) + Vector3.new(0, 0.8, 0), COLORS.lilac, "GALLERY / 갤러리")
 
-	npc(map, "큐레이터 모모 / Curator Momo", plazaFacingPoint(tutorialCenter, 7) + Vector3.new(0, 0.7, 0), COLORS.coral, "튜토리얼 / Tutorial")
-	npc(map, "팔레트 상인 / Palette Merchant", plazaFacingPoint(shopCenter, 7) + Vector3.new(0, 0.7, 0), COLORS.cyan, "상점 / Shop")
-	npc(map, "미션 선생님 / Mission Teacher", plazaFacingPoint(missionCenter, 7) + Vector3.new(0, 0.7, 0), COLORS.mint, "미션 / Missions")
-	npc(map, "갤러리 관리자 / Gallery Keeper", plazaFacingPoint(galleryCenter, 7) + Vector3.new(0, 0.7, 0), COLORS.lilac, "갤러리 / Gallery")
+	npc(
+		map,
+		"큐레이터 모모 / Curator Momo",
+		plazaFacingPoint(tutorialCenter, 7) + Vector3.new(0, 0.7, 0),
+		COLORS.coral,
+		"튜토리얼 / Tutorial",
+		"curator"
+	)
+	npc(
+		map,
+		"팔레트 상인 / Palette Merchant",
+		plazaFacingPoint(shopCenter, 7) + Vector3.new(0, 0.7, 0),
+		COLORS.cyan,
+		"상점 / Shop",
+		"merchant"
+	)
+	npc(
+		map,
+		"미션 선생님 / Mission Teacher",
+		plazaFacingPoint(missionCenter, 7) + Vector3.new(0, 0.7, 0),
+		COLORS.mint,
+		"미션 / Missions",
+		"teacher"
+	)
+	npc(
+		map,
+		"갤러리 관리자 / Gallery Keeper",
+		plazaFacingPoint(galleryCenter, 7) + Vector3.new(0, 0.7, 0),
+		COLORS.lilac,
+		"갤러리 / Gallery",
+		"gallery"
+	)
 
 	galleryFrames(map, Vector3.new(40, 1, 38.8))
 
