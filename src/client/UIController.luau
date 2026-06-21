@@ -174,7 +174,7 @@ function UIController:build()
 	tools.BorderSizePixel = 0
 	tools.ScrollBarThickness = 4
 	tools.ScrollingDirection = Enum.ScrollingDirection.X
-	tools.CanvasSize = UDim2.fromOffset(1520, 0)
+	tools.CanvasSize = UDim2.fromOffset(1760, 0)
 	tools.Parent = main
 
 	for index, color in CanvasController.COLORS do
@@ -188,19 +188,31 @@ function UIController:build()
 		table.insert(self.colorButtons, colorButton)
 		colorButton.MouseButton1Click:Connect(function()
 			self.canvasController:setColor(colorButton.BackgroundColor3)
+			self.colorPickerButton.BackgroundColor3 = colorButton.BackgroundColor3
 		end)
 	end
-	local erase = button(tools, "Eraser", UDim2.fromOffset(76, 36), UDim2.fromOffset(344, 8), Color3.fromRGB(93, 100, 120))
+	self.colorPickerButton = button(
+		tools,
+		"더 많은 색\nMore Colors",
+		UDim2.fromOffset(108, 44),
+		UDim2.fromOffset(344, 4),
+		Color3.fromRGB(112, 83, 245)
+	)
+	self.colorPickerButton.TextSize = 13
+	self.colorPickerButton.MouseButton1Click:Connect(function()
+		self:_openColorPicker(self.canvasController)
+	end)
+	local erase = button(tools, "지우개 / Eraser", UDim2.fromOffset(106, 44), UDim2.fromOffset(460, 4), Color3.fromRGB(93, 100, 120))
 	erase.MouseButton1Click:Connect(function() self.canvasController:setErase(true) end)
-	local undo = button(tools, self.strings.undo, UDim2.fromOffset(92, 36), UDim2.fromOffset(428, 8))
+	local undo = button(tools, self.strings.undo, UDim2.fromOffset(96, 44), UDim2.fromOffset(574, 4))
 	undo.MouseButton1Click:Connect(function() self.remotes.UndoStroke:FireServer() end)
-	local clear = button(tools, self.strings.clear, UDim2.fromOffset(82, 36), UDim2.fromOffset(528, 8), Color3.fromRGB(238, 89, 106))
+	local clear = button(tools, self.strings.clear, UDim2.fromOffset(88, 44), UDim2.fromOffset(678, 4), Color3.fromRGB(238, 89, 106))
 	clear.MouseButton1Click:Connect(function() self.remotes.ClearCanvas:FireServer() end)
 	self.finishDrawingButton = button(
 		tools,
 		"완성 제출 / Done",
-		UDim2.fromOffset(120, 36),
-		UDim2.fromOffset(618, 8),
+		UDim2.fromOffset(126, 44),
+		UDim2.fromOffset(774, 4),
 		Color3.fromRGB(74, 190, 108)
 	)
 	self.finishDrawingButton.Visible = false
@@ -221,10 +233,10 @@ function UIController:build()
 		)
 	end
 	local presets = {
-		{ id = "fine", label = "세밀", x = 746 },
-		{ id = "marker", label = "마커", x = 812 },
-		{ id = "bold", label = "굵게", x = 878 },
-		{ id = "soft", label = "부드럽게", x = 944 },
+		{ id = "pencil", label = "연필\nPencil", x = 908, color = Color3.fromRGB(88, 102, 126) },
+		{ id = "marker", label = "마커\nMarker", x = 994, color = Color3.fromRGB(112, 83, 245) },
+		{ id = "brush", label = "붓\nBrush", x = 1080, color = Color3.fromRGB(255, 116, 139) },
+		{ id = "crayon", label = "크레용\nCrayon", x = 1166, color = Color3.fromRGB(255, 156, 56) },
 	}
 	for _, preset in presets do
 		local presetId = preset.id
@@ -232,12 +244,13 @@ function UIController:build()
 		local presetButton = button(
 			tools,
 			presetLabel,
-			UDim2.fromOffset(60, 36),
-			UDim2.fromOffset(preset.x, 8),
-			Color3.fromRGB(112, 83, 245)
+			UDim2.fromOffset(80, 44),
+			UDim2.fromOffset(preset.x, 4),
+			preset.color
 		)
+		presetButton.TextSize = 13
 		presetButton.MouseButton1Click:Connect(function()
-			self.canvasController:applyPreset(presetId)
+			self.canvasController:setTool(presetId)
 			updateBrushStatus(presetLabel)
 		end)
 	end
@@ -246,8 +259,8 @@ function UIController:build()
 		local opacityButton = button(
 			tools,
 			tostring(math.floor(selectedOpacity * 100)) .. "%",
-			UDim2.fromOffset(58, 36),
-			UDim2.fromOffset(1010 + (index - 1) * 64, 8),
+			UDim2.fromOffset(58, 44),
+			UDim2.fromOffset(1254 + (index - 1) * 64, 4),
 			Color3.fromRGB(72, 162, 191)
 		)
 		opacityButton.MouseButton1Click:Connect(function()
@@ -255,21 +268,21 @@ function UIController:build()
 			updateBrushStatus("사용자")
 		end)
 	end
-	local smaller = button(tools, "−", UDim2.fromOffset(42, 36), UDim2.fromOffset(1206, 8), Color3.fromRGB(93, 100, 120))
+	local smaller = button(tools, "−", UDim2.fromOffset(46, 44), UDim2.fromOffset(1450, 4), Color3.fromRGB(93, 100, 120))
 	smaller.MouseButton1Click:Connect(function()
 		self.canvasController:setSize(self.canvasController.size - 2)
 		updateBrushStatus("사용자")
 	end)
-	local larger = button(tools, "+", UDim2.fromOffset(42, 36), UDim2.fromOffset(1254, 8), Color3.fromRGB(93, 100, 120))
+	local larger = button(tools, "+", UDim2.fromOffset(46, 44), UDim2.fromOffset(1502, 4), Color3.fromRGB(93, 100, 120))
 	larger.MouseButton1Click:Connect(function()
 		self.canvasController:setSize(self.canvasController.size + 2)
 		updateBrushStatus("사용자")
 	end)
-	local circleStamp = button(tools, "Round", UDim2.fromOffset(72, 36), UDim2.fromOffset(1306, 8), Color3.fromRGB(255, 156, 56))
+	local circleStamp = button(tools, "둥글게", UDim2.fromOffset(72, 44), UDim2.fromOffset(1554, 4), Color3.fromRGB(72, 162, 191))
 	circleStamp.MouseButton1Click:Connect(function()
 		self.canvasController:setStampType("circle")
 	end)
-	local squareStamp = button(tools, "Square", UDim2.fromOffset(72, 36), UDim2.fromOffset(1384, 8), Color3.fromRGB(255, 156, 56))
+	local squareStamp = button(tools, "네모", UDim2.fromOffset(72, 44), UDim2.fromOffset(1632, 4), Color3.fromRGB(72, 162, 191))
 	squareStamp.MouseButton1Click:Connect(function()
 		self.canvasController:setStampType("square")
 	end)
@@ -459,7 +472,7 @@ function UIController:build()
 	end)
 
 	self.canvasController = CanvasController.new(self.canvas, self.remotes)
-	self.canvasController:applyPreset("marker")
+	self.canvasController:setTool("marker")
 	self.canvasController:bind()
 
 	local camera = workspace.CurrentCamera
@@ -598,6 +611,54 @@ function UIController:_clearModal()
 	end
 end
 
+function UIController:_openColorPicker(targetController)
+	self:_clearModal()
+	self.modalTitle.Text = "색 고르기 / Pick a Color"
+
+	local picker = Instance.new("Frame")
+	picker.Size = UDim2.new(1, -8, 0, 330)
+	picker.BackgroundColor3 = Color3.fromRGB(244, 242, 250)
+	picker.ZIndex = 61
+	picker.Parent = self.modalList
+	corner(picker, 16)
+
+	local guide = text(
+		picker,
+		"좋아하는 색을 눌러보세요!  위는 선명하게, 아래는 부드럽게\nTap a color — bright, deep, and soft tones",
+		UDim2.new(1, -24, 0, 52),
+		UDim2.fromOffset(12, 8),
+		15,
+		true
+	)
+	guide.ZIndex = 62
+
+	for index, color in CanvasController.ART_COLORS do
+		local column = (index - 1) % 8
+		local row = math.floor((index - 1) / 8)
+		local swatch = Instance.new("TextButton")
+		swatch.Name = "DetailedColor_" .. index
+		swatch.Text = ""
+		swatch.Size = UDim2.fromOffset(48, 42)
+		swatch.Position = UDim2.new(column / 8, 5, 0, 68 + row * 49)
+		swatch.BackgroundColor3 = color
+		swatch.ZIndex = 63
+		swatch.Parent = picker
+		corner(swatch, 12)
+		local outline = Instance.new("UIStroke")
+		outline.Color = Color3.fromRGB(255, 255, 255)
+		outline.Thickness = 2
+		outline.Parent = swatch
+		swatch.MouseButton1Click:Connect(function()
+			targetController:setColor(color)
+			if self.colorPickerButton and targetController == self.canvasController then
+				self.colorPickerButton.BackgroundColor3 = color
+			end
+			self.modal.Visible = false
+		end)
+	end
+	self.modal.Visible = true
+end
+
 function UIController:_openDrawingBubbleComposer()
 	self:_clearModal()
 	self.modalTitle.Text = "그림 말풍선 / Drawing Bubble"
@@ -632,6 +693,7 @@ function UIController:_openDrawingBubbleComposer()
 		},
 	})
 	localController:applyPreset("fine")
+	localController:setTool("pencil")
 	localController:setEnabled(true, "ALL_AGES")
 	localController:bind()
 	self.bubbleComposerController = localController
@@ -649,7 +711,6 @@ function UIController:_openDrawingBubbleComposer()
 			localController:setColor(color)
 		end)
 	end
-
 	local clearBubble = button(composer, "지우기 / Clear", UDim2.fromOffset(120, 42), UDim2.new(0, 14, 1, -58), Color3.fromRGB(93, 100, 120))
 	clearBubble.ZIndex = 63
 	clearBubble.MouseButton1Click:Connect(function()
@@ -670,6 +731,7 @@ function UIController:_openDrawingBubbleComposer()
 					color = stroke.color,
 					erase = stroke.erase,
 					stampType = stroke.stampType,
+					toolType = stroke.toolType,
 				})
 			end
 			self.remotes.ShareDrawingBubble:FireServer(safeStrokes)

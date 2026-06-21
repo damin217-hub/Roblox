@@ -1,21 +1,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.ArtAcademy.Config)
+local ArtPalette = require(ReplicatedStorage.ArtAcademy.ArtPalette)
 local ModerationService = require(script.Parent.ModerationService)
 
 local CanvasService = {}
 local strokes = {}
 local perPlayerHistory = {}
-local ALL_AGES_COLORS = {
-	{ r = 0.12, g = 0.13, b = 0.19 },
-	{ r = 0.96, g = 0.26, b = 0.34 },
-	{ r = 1, g = 0.60, b = 0.20 },
-	{ r = 1, g = 0.86, b = 0.26 },
-	{ r = 0.29, g = 0.75, b = 0.42 },
-	{ r = 0.25, g = 0.59, b = 1 },
-	{ r = 0.57, g = 0.36, b = 1 },
-	{ r = 1, g = 1, b = 1 },
-}
-
 local function finite(value): boolean
 	return type(value) == "number" and value == value and math.abs(value) < 100000
 end
@@ -31,19 +21,6 @@ end
 function CanvasService.reset()
 	table.clear(strokes)
 	table.clear(perPlayerHistory)
-end
-
-local function nearestApprovedColor(color)
-	local best = ALL_AGES_COLORS[1]
-	local bestDistance = math.huge
-	for _, approved in ALL_AGES_COLORS do
-		local distance = (color.r - approved.r) ^ 2 + (color.g - approved.g) ^ 2 + (color.b - approved.b) ^ 2
-		if distance < bestDistance then
-			bestDistance = distance
-			best = approved
-		end
-	end
-	return table.clone(best)
 end
 
 function CanvasService.submit(player: Player, payload, isArtist: boolean, _mode: string, cosmetics)
@@ -67,7 +44,9 @@ function CanvasService.submit(player: Player, payload, isArtist: boolean, _mode:
 	payload.y = snap(payload.y, grid.Y)
 	payload.px = snap(payload.px, grid.X)
 	payload.py = snap(payload.py, grid.Y)
-	payload.color = nearestApprovedColor(payload.color)
+	payload.color = ArtPalette.nearest(payload.color)
+	local allowedTools = { pencil = true, marker = true, brush = true, crayon = true }
+	local toolType = allowedTools[payload.toolType] and payload.toolType or "marker"
 	local stroke = {
 		id = #strokes + 1,
 		userId = player.UserId,
@@ -82,6 +61,7 @@ function CanvasService.submit(player: Player, payload, isArtist: boolean, _mode:
 		kind = "line",
 		stampType = payload.stampType == "square" and "square" or "circle",
 		brushStyle = cosmetics and cosmetics.brush == "brush_neon" and "neon" or "classic",
+		toolType = toolType,
 	}
 	table.insert(strokes, stroke)
 	perPlayerHistory[player] = perPlayerHistory[player] or {}

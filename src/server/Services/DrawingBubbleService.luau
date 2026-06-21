@@ -1,22 +1,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.ArtAcademy.Config)
 local StrokeCodec = require(ReplicatedStorage.ArtAcademy.StrokeCodec)
+local ArtPalette = require(ReplicatedStorage.ArtAcademy.ArtPalette)
 local ModerationService = require(script.Parent.ModerationService)
 
 local DrawingBubbleService = {}
 local active = {}
 local nextId = 0
-
-local COLORS = {
-	{ r = 0.12, g = 0.13, b = 0.19 },
-	{ r = 0.96, g = 0.26, b = 0.34 },
-	{ r = 1, g = 0.60, b = 0.20 },
-	{ r = 1, g = 0.86, b = 0.26 },
-	{ r = 0.29, g = 0.75, b = 0.42 },
-	{ r = 0.25, g = 0.59, b = 1 },
-	{ r = 0.57, g = 0.36, b = 1 },
-	{ r = 1, g = 1, b = 1 },
-}
 
 local function finite(value)
 	return type(value) == "number" and value == value and math.abs(value) < 100000
@@ -26,16 +16,7 @@ local function nearestColor(color)
 	if type(color) ~= "table" or not finite(color.r) or not finite(color.g) or not finite(color.b) then
 		return nil
 	end
-	local best = COLORS[1]
-	local bestDistance = math.huge
-	for _, approved in COLORS do
-		local distance = (color.r - approved.r) ^ 2 + (color.g - approved.g) ^ 2 + (color.b - approved.b) ^ 2
-		if distance < bestDistance then
-			best = approved
-			bestDistance = distance
-		end
-	end
-	return table.clone(best)
+	return ArtPalette.nearest(color)
 end
 
 function DrawingBubbleService.submit(player: Player, submitted)
@@ -69,6 +50,7 @@ function DrawingBubbleService.submit(player: Player, submitted)
 					kind = "line",
 					stampType = candidate.stampType == "square" and "square" or "circle",
 					brushStyle = "classic",
+					toolType = "marker",
 				})
 			end
 		end

@@ -1,4 +1,6 @@
 local StrokeCodec = {}
+local TOOL_TO_ID = { pencil = 1, marker = 2, brush = 3, crayon = 4 }
+local ID_TO_TOOL = { "pencil", "marker", "brush", "crayon" }
 
 local function quantizeUnit(value: number): number
 	return math.clamp(math.floor(value * 1000 + 0.5), 0, 1000)
@@ -28,6 +30,7 @@ function StrokeCodec.encode(strokes, maxStrokes: number?)
 			stroke.stampType == "square" and 1 or 0,
 			stroke.brushStyle == "neon" and 1 or 0,
 			math.clamp(math.floor((stroke.opacity or 1) * 100 + 0.5), 25, 100),
+			TOOL_TO_ID[stroke.toolType] or 2,
 		})
 	end
 	return result
@@ -53,6 +56,7 @@ function StrokeCodec.decode(encoded)
 			stampType = item[12] == 1 and "square" or "circle",
 			brushStyle = item[13] == 1 and "neon" or "classic",
 			opacity = (item[14] or 100) / 100,
+			toolType = ID_TO_TOOL[item[15] or 2] or "marker",
 		})
 	end
 	return result

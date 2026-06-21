@@ -16,6 +16,7 @@ check(shared:FindFirstChild("Config") ~= nil, "Config module exists")
 check(shared:FindFirstChild("Prompts") ~= nil, "Prompt catalog exists")
 check(shared:FindFirstChild("Catalog") ~= nil, "Cosmetic catalog exists")
 check(shared:FindFirstChild("StrokeCodec") ~= nil, "Stroke codec exists")
+check(shared:FindFirstChild("ArtPalette") ~= nil, "expanded all-ages art palette exists")
 
 local server = ServerScriptService:FindFirstChild("ArtAcademyServer")
 check(server ~= nil, "ArtAcademyServer exists")
@@ -47,6 +48,7 @@ local MapService = require(services.MapService)
 local CanvasService = require(services.CanvasService)
 local QuestService = require(services.QuestService)
 local StrokeCodec = require(shared.StrokeCodec)
+local ArtPalette = require(shared.ArtPalette)
 local PlayerDataService = require(services.PlayerDataService)
 local ModerationService = require(services.ModerationService)
 local DrawingBubbleService = require(services.DrawingBubbleService)
@@ -55,6 +57,7 @@ check(Config.ROUNDS_PER_MATCH == 5, "match contains five rounds")
 check(Config.DRAWING_SECONDS == 75, "drawing timer is 75 seconds")
 check(#Prompts >= 15, "bilingual prompt catalog is populated")
 check(#Catalog >= 5, "cosmetic catalog is populated")
+check(#ArtPalette.COLORS == 40, "child-friendly detailed color picker exposes forty approved colors")
 check(PromptService.matches(Prompts[1], Prompts[1].ko), "Korean answer matching works")
 check(PromptService.matches(Prompts[1], string.upper(Prompts[1].en)), "English case-insensitive matching works")
 
@@ -85,12 +88,14 @@ check(CanvasService.submit(fakeArtist, longStroke, true, "ALL_AGES") == nil, "ov
 check(acceptedStroke.px ~= acceptedStroke.x and acceptedStroke.py ~= acceptedStroke.y, "continuous brush segment preserves its start point")
 check(acceptedStroke.opacity == 0.7, "server preserves validated brush opacity")
 check(acceptedStroke.stampType == "circle", "approved brush shape is preserved")
+check(acceptedStroke.toolType == "marker", "server preserves an approved coloring tool")
 
 local encoded = StrokeCodec.encode({ acceptedStroke }, 1)
 local decoded = StrokeCodec.decode(encoded)
 check(#encoded == 1 and #decoded == 1, "gallery stroke codec round-trips")
 check(decoded[1].kind == "line" and decoded[1].stampType == "circle", "gallery codec preserves brush metadata")
 check(math.abs(decoded[1].opacity - 0.7) < 0.01, "gallery codec preserves opacity")
+check(decoded[1].toolType == "marker", "gallery codec preserves the coloring tool")
 local manyStrokes = {}
 for index = 1, 500 do
 	local clone = table.clone(acceptedStroke)
@@ -250,6 +255,9 @@ check(canvasController.imageLabel ~= nil, "EditableImage is bound to an ImageLab
 canvasController:setCosmetics({ brush = "brush_neon", palette = "palette_candy" })
 check(canvasController.brushStyle == "neon", "equipped brush cosmetic changes renderer style")
 check(canvasController:getPalette() == CanvasController.CANDY_COLORS, "equipped palette cosmetic changes colors")
+check(canvasController:setTool("brush") and canvasController.toolType == "brush", "paint brush tool can be selected")
+check(canvasController:setTool("crayon") and canvasController.toolType == "crayon", "crayon tool can be selected")
+check(canvasController:setTool("pencil") and canvasController.size == 5, "pencil tool applies a fine child-friendly preset")
 canvasController:renderSnapshot(decoded)
 check(#canvasController.strokes == 1, "gallery renderer replays a decoded artwork")
 canvasController:renderSnapshot(StrokeCodec.decode(StrokeCodec.encode(manyStrokes, Config.GALLERY_MAX_STROKES)))
@@ -332,6 +340,9 @@ uiController:onState({
 check(uiController.roundBadge.Text == "라운드 3/5", "round progress is visible in Korean")
 check(uiController.canvasController.enabled, "artist canvas is enabled during drawing")
 check(uiController.finishDrawingButton.Visible, "artist sees the early drawing submission button")
+uiController:_openColorPicker(uiController.canvasController)
+check(uiController.modal.Visible, "detailed color picker opens in the protected modal")
+check(uiController.modalList:FindFirstChild("Frame") ~= nil, "detailed color picker builds its large swatch panel")
 uiController:onState({
 	state = "Results",
 	seconds = 10,

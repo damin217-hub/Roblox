@@ -2,6 +2,7 @@ local UserInputService = game:GetService("UserInputService")
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.ArtAcademy.Config)
+local ArtPalette = require(ReplicatedStorage.ArtAcademy.ArtPalette)
 
 local CanvasController = {}
 CanvasController.__index = CanvasController
@@ -32,6 +33,12 @@ local BRUSH_PRESETS = {
 	bold = { size = 24, opacity = 1 },
 	soft = { size = 18, opacity = 0.45 },
 }
+local TOOL_PRESETS = {
+	pencil = { size = 5, opacity = 1, stampType = "circle" },
+	marker = { size = 14, opacity = 0.78, stampType = "round" },
+	brush = { size = 18, opacity = 0.72, stampType = "circle" },
+	crayon = { size = 12, opacity = 0.68, stampType = "square" },
+}
 
 function CanvasController.new(canvas: GuiObject, remotes)
 	local self = setmetatable({}, CanvasController)
@@ -46,6 +53,7 @@ function CanvasController.new(canvas: GuiObject, remotes)
 	self.stampType = "circle"
 	self.palette = COLORS
 	self.brushStyle = "classic"
+	self.toolType = "marker"
 	self.drawing = false
 	self.activeTouch = nil
 	self.last = nil
@@ -117,6 +125,17 @@ end
 
 function CanvasController:setStampType(stampType: string)
 	self.stampType = stampType == "square" and "square" or "circle"
+end
+
+function CanvasController:setTool(toolType: string)
+	local preset = TOOL_PRESETS[toolType]
+	if not preset then return false end
+	self.toolType = toolType
+	self:setSize(preset.size)
+	self:setOpacity(preset.opacity)
+	self:setStampType(preset.stampType)
+	self.erase = false
+	return true
 end
 
 function CanvasController:setCosmetics(equipped)
@@ -201,6 +220,7 @@ function CanvasController:_drawEditableStroke(stroke)
 	local b = Vector2.new(stroke.x, stroke.y) * image.Size
 	local delta = b - a
 	local distance = delta.Magnitude
+	local toolType = stroke.toolType or "marker"
 	local radius = math.max(1, math.floor(stroke.size / 2))
 	local color = stroke.erase and Color3.fromRGB(255, 255, 255)
 		or Color3.new(stroke.color.r, stroke.color.g, stroke.color.b)
@@ -210,6 +230,12 @@ function CanvasController:_drawEditableStroke(stroke)
 	for index = 0, steps do
 		local alpha = index / steps
 		local point = a:Lerp(b, alpha)
+		local drawRadius = radius
+		if toolType == "brush" then
+			drawRadius = math.max(2, math.floor(radius * (0.68 + math.sin(alpha * math.pi) * 0.32)))
+		elseif toolType == "pencil" then
+			drawRadius = math.max(1, math.floor(radius * 0.7))
+		end
 		if stroke.brushStyle == "neon" and not stroke.erase then
 			image:DrawCircle(
 				Vector2.new(math.floor(point.X), math.floor(point.Y)),
@@ -219,10 +245,21 @@ function CanvasController:_drawEditableStroke(stroke)
 				Enum.ImageCombineType.AlphaBlend
 			)
 		end
-		if stroke.stampType == "square" then
-			local diameter = radius * 2
+		if toolType == "crayon" then
+			for grain = 1, 3 do
+				local offset = Vector2.new(((index + grain * 3) % 5) - 2, ((index * 2 + grain) % 5) - 2)
+				image:DrawCircle(
+					Vector2.new(math.floor(point.X + offset.X), math.floor(point.Y + offset.Y)),
+					math.max(1, math.floor(drawRadius * 0.55)),
+					color,
+					math.clamp(transparency + 0.18, 0, 0.85),
+					Enum.ImageCombineType.AlphaBlend
+				)
+			end
+		elseif stroke.stampType == "square" then
+			local diameter = drawRadius * 2
 			image:DrawRectangle(
-				Vector2.new(math.floor(point.X - radius), math.floor(point.Y - radius)),
+				Vector2.new(math.floor(point.X - drawRadius), math.floor(point.Y - drawRadius)),
 				Vector2.new(diameter, diameter),
 				color,
 				transparency,
@@ -231,7 +268,7 @@ function CanvasController:_drawEditableStroke(stroke)
 		else
 			image:DrawCircle(
 				Vector2.new(math.floor(point.X), math.floor(point.Y)),
-				radius,
+				drawRadius,
 				color,
 				transparency,
 				combineType
@@ -343,6 +380,7 @@ function CanvasController:_submit(point: Vector2)
 		kind = "line",
 		stampType = self.stampType,
 		brushStyle = self.brushStyle,
+		toolType = self.toolType,
 	}
 	self.remotes.SubmitStroke:FireServer(payload)
 	self.last = point
@@ -405,4 +443,6 @@ end
 CanvasController.COLORS = COLORS
 CanvasController.CANDY_COLORS = CANDY_COLORS
 CanvasController.BRUSH_PRESETS = BRUSH_PRESETS
+CanvasController.TOOL_PRESETS = TOOL_PRESETS
+CanvasController.ART_COLORS = ArtPalette.COLORS
 return CanvasController
