@@ -7,6 +7,7 @@ return table.freeze({
 	"VoteSkip",
 	"UndoStroke",
 	"ClearCanvas",
+	"FinishDrawing",
 	"RoundState",
 	"StrokeBroadcast",
 	"GuessBroadcast",

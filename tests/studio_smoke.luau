@@ -301,10 +301,17 @@ uiController:setCanvasPanelOpen(false)
 check(not uiController.canvasPanel.Visible and uiController.openCanvasButton.Visible, "canvas panel can be minimized without hiding the game")
 uiController:setCanvasPanelOpen(true)
 check(uiController.canvasPanel.Visible and not uiController.openCanvasButton.Visible, "canvas panel can be restored")
+check(uiController.hideButton:GetAttribute("TooltipText") ~= nil, "show and hide control has an explanatory tooltip")
+check(uiController.skipButton:GetAttribute("TooltipText") ~= nil, "skip vote control has an explanatory tooltip")
+check(uiController.blockButton:GetAttribute("TooltipText") ~= nil, "block control has an explanatory tooltip")
+check(uiController.reportButton:GetAttribute("TooltipText") ~= nil, "report control has an explanatory tooltip")
 uiController:_openDrawingBubbleComposer()
 check(uiController.bubbleComposerController ~= nil, "drawing bubble composer opens with a local canvas")
 check(uiController.modal.Visible, "drawing bubble composer uses the modal workspace")
+check(uiController.modalScrim.Visible and uiController.modalScrim.Active, "modal input blocker prevents clicks reaching the main canvas")
+check(not uiController.canvas.Active, "main drawing canvas is inactive while a modal is open")
 uiController.modal.Visible = false
+check(not uiController.modalScrim.Visible and uiController.canvas.Active, "closing the modal restores main canvas input")
 uiController.applyResponsiveLayout(600)
 check(not uiController.title.Visible, "mobile layout hides the wide title")
 check(uiController.canvas.AbsoluteSize.X >= 0, "mobile layout keeps the canvas mounted")
@@ -324,6 +331,7 @@ uiController:onState({
 })
 check(uiController.roundBadge.Text == "라운드 3/5", "round progress is visible in Korean")
 check(uiController.canvasController.enabled, "artist canvas is enabled during drawing")
+check(uiController.finishDrawingButton.Visible, "artist sees the early drawing submission button")
 uiController:onState({
 	state = "Results",
 	seconds = 10,

@@ -123,6 +123,16 @@ remotes.ClearCanvas.OnServerEvent:Connect(function(player)
 	end
 end)
 
+remotes.FinishDrawing.OnServerEvent:Connect(function(player)
+	local ok, message = RoundService.finishDrawing(player)
+	remotes.Toast:FireClient(player, message)
+	if ok then
+		TelemetryService.log(player, "drawing_submitted_early", CanvasService.getCount(), {
+			mode = experienceMode,
+		})
+	end
+end)
+
 remotes.SubmitGuess.OnServerEvent:Connect(function(player, raw)
 	local state, artist, prompt = RoundService.getState()
 	if state ~= "Drawing" or not RoundService.isParticipant(player) or player == artist or not prompt then return end

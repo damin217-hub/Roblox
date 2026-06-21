@@ -229,6 +229,17 @@ function RoundService.voteSkip(player: Player)
 	return false
 end
 
+function RoundService.finishDrawing(player: Player)
+	if state ~= "Drawing" or player ~= artist then
+		return false, "Only the current artist can submit. / 현재 출제자만 제출할 수 있습니다."
+	end
+	if CanvasService.getCount() < 1 then
+		return false, "Draw at least one stroke first. / 그림을 한 획 이상 그려주세요."
+	end
+	endDrawingEarly = true
+	return true, "Drawing submitted! / 그림을 제출했습니다!"
+end
+
 function RoundService.run()
 	while true do
 		state = "Waiting"

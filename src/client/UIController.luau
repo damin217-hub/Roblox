@@ -47,6 +47,21 @@ local function button(parent, value, size, position, color)
 	return item
 end
 
+local function attachTooltip(item, tooltip, value)
+	item:SetAttribute("TooltipText", value)
+	item.MouseEnter:Connect(function()
+		tooltip.Text = value
+		tooltip.Position = UDim2.fromOffset(
+			item.AbsolutePosition.X + item.AbsoluteSize.X / 2,
+			math.max(8, item.AbsolutePosition.Y - 8)
+		)
+		tooltip.Visible = true
+	end)
+	item.MouseLeave:Connect(function()
+		tooltip.Visible = false
+	end)
+end
+
 function UIController.new(remotes, playerOverride, localeOverride)
 	local self = setmetatable({}, UIController)
 	self.player = playerOverride or Players.LocalPlayer
@@ -131,6 +146,15 @@ function UIController:build()
 	self.openCanvasButton.MouseButton1Click:Connect(function()
 		self:setCanvasPanelOpen(true)
 	end)
+	self.tooltip = text(gui, "", UDim2.fromOffset(300, 54), UDim2.fromOffset(0, 0), 14, true)
+	self.tooltip.Name = "ControlTooltip"
+	self.tooltip.AnchorPoint = Vector2.new(0.5, 1)
+	self.tooltip.BackgroundTransparency = 0.08
+	self.tooltip.BackgroundColor3 = Color3.fromRGB(35, 38, 55)
+	self.tooltip.TextColor3 = Color3.fromRGB(255, 255, 255)
+	self.tooltip.Visible = false
+	self.tooltip.ZIndex = 90
+	corner(self.tooltip, 10)
 	self.canvas = Instance.new("Frame")
 	self.canvas.Name = "Canvas"
 	self.canvas.Active = true
@@ -150,7 +174,7 @@ function UIController:build()
 	tools.BorderSizePixel = 0
 	tools.ScrollBarThickness = 4
 	tools.ScrollingDirection = Enum.ScrollingDirection.X
-	tools.CanvasSize = UDim2.fromOffset(1390, 0)
+	tools.CanvasSize = UDim2.fromOffset(1520, 0)
 	tools.Parent = main
 
 	for index, color in CanvasController.COLORS do
@@ -172,6 +196,22 @@ function UIController:build()
 	undo.MouseButton1Click:Connect(function() self.remotes.UndoStroke:FireServer() end)
 	local clear = button(tools, self.strings.clear, UDim2.fromOffset(82, 36), UDim2.fromOffset(528, 8), Color3.fromRGB(238, 89, 106))
 	clear.MouseButton1Click:Connect(function() self.remotes.ClearCanvas:FireServer() end)
+	self.finishDrawingButton = button(
+		tools,
+		"완성 제출 / Done",
+		UDim2.fromOffset(120, 36),
+		UDim2.fromOffset(618, 8),
+		Color3.fromRGB(74, 190, 108)
+	)
+	self.finishDrawingButton.Visible = false
+	self.finishDrawingButton.MouseButton1Click:Connect(function()
+		self.remotes.FinishDrawing:FireServer()
+	end)
+	attachTooltip(
+		self.finishDrawingButton,
+		self.tooltip,
+		"현재 그림을 제출하고 즉시 공개합니다. / Submit now and reveal the drawing."
+	)
 	local function updateBrushStatus(name)
 		self.brushStatus.Text = string.format(
 			"%s  %dpx  %d%%",
@@ -181,10 +221,10 @@ function UIController:build()
 		)
 	end
 	local presets = {
-		{ id = "fine", label = "세밀", x = 618 },
-		{ id = "marker", label = "마커", x = 684 },
-		{ id = "bold", label = "굵게", x = 750 },
-		{ id = "soft", label = "부드럽게", x = 816 },
+		{ id = "fine", label = "세밀", x = 746 },
+		{ id = "marker", label = "마커", x = 812 },
+		{ id = "bold", label = "굵게", x = 878 },
+		{ id = "soft", label = "부드럽게", x = 944 },
 	}
 	for _, preset in presets do
 		local presetId = preset.id
@@ -207,7 +247,7 @@ function UIController:build()
 			tools,
 			tostring(math.floor(selectedOpacity * 100)) .. "%",
 			UDim2.fromOffset(58, 36),
-			UDim2.fromOffset(882 + (index - 1) * 64, 8),
+			UDim2.fromOffset(1010 + (index - 1) * 64, 8),
 			Color3.fromRGB(72, 162, 191)
 		)
 		opacityButton.MouseButton1Click:Connect(function()
@@ -215,21 +255,21 @@ function UIController:build()
 			updateBrushStatus("사용자")
 		end)
 	end
-	local smaller = button(tools, "−", UDim2.fromOffset(42, 36), UDim2.fromOffset(1078, 8), Color3.fromRGB(93, 100, 120))
+	local smaller = button(tools, "−", UDim2.fromOffset(42, 36), UDim2.fromOffset(1206, 8), Color3.fromRGB(93, 100, 120))
 	smaller.MouseButton1Click:Connect(function()
 		self.canvasController:setSize(self.canvasController.size - 2)
 		updateBrushStatus("사용자")
 	end)
-	local larger = button(tools, "+", UDim2.fromOffset(42, 36), UDim2.fromOffset(1126, 8), Color3.fromRGB(93, 100, 120))
+	local larger = button(tools, "+", UDim2.fromOffset(42, 36), UDim2.fromOffset(1254, 8), Color3.fromRGB(93, 100, 120))
 	larger.MouseButton1Click:Connect(function()
 		self.canvasController:setSize(self.canvasController.size + 2)
 		updateBrushStatus("사용자")
 	end)
-	local circleStamp = button(tools, "Round", UDim2.fromOffset(72, 36), UDim2.fromOffset(1178, 8), Color3.fromRGB(255, 156, 56))
+	local circleStamp = button(tools, "Round", UDim2.fromOffset(72, 36), UDim2.fromOffset(1306, 8), Color3.fromRGB(255, 156, 56))
 	circleStamp.MouseButton1Click:Connect(function()
 		self.canvasController:setStampType("circle")
 	end)
-	local squareStamp = button(tools, "Square", UDim2.fromOffset(72, 36), UDim2.fromOffset(1256, 8), Color3.fromRGB(255, 156, 56))
+	local squareStamp = button(tools, "Square", UDim2.fromOffset(72, 36), UDim2.fromOffset(1384, 8), Color3.fromRGB(255, 156, 56))
 	squareStamp.MouseButton1Click:Connect(function()
 		self.canvasController:setStampType("square")
 	end)
@@ -305,10 +345,20 @@ function UIController:build()
 		self.canvas.Visible = not self.hidden
 		self.hideButton.Text = self.hidden and "Show / 다시 보기" or self.strings.hide
 	end)
-	local skip = button(side, self.strings.skip, UDim2.new(0.48, -5, 0, 42), UDim2.new(0.52, 0, 0.79, 0), Color3.fromRGB(255, 156, 56))
-	skip.MouseButton1Click:Connect(function() self.remotes.VoteSkip:FireServer() end)
-	local block = button(side, "Block / 차단", UDim2.new(0.48, -5, 0, 40), UDim2.new(0, 10, 0.89, 0), Color3.fromRGB(93, 100, 120))
-	block.MouseButton1Click:Connect(function()
+	attachTooltip(
+		self.hideButton,
+		self.tooltip,
+		"그림만 숨기거나 다시 표시합니다. / Hide or show only the current drawing."
+	)
+	self.skipButton = button(side, self.strings.skip, UDim2.new(0.48, -5, 0, 42), UDim2.new(0.52, 0, 0.79, 0), Color3.fromRGB(255, 156, 56))
+	self.skipButton.MouseButton1Click:Connect(function() self.remotes.VoteSkip:FireServer() end)
+	attachTooltip(
+		self.skipButton,
+		self.tooltip,
+		"다수가 동의하면 현재 출제자를 건너뜁니다. / Majority vote skips the current artist."
+	)
+	self.blockButton = button(side, "Block / 차단", UDim2.new(0.48, -5, 0, 40), UDim2.new(0, 10, 0.89, 0), Color3.fromRGB(93, 100, 120))
+	self.blockButton.MouseButton1Click:Connect(function()
 		local artistUserId = self.lastState and self.lastState.artistUserId or 0
 		local target = artistUserId > 0 and Players:GetPlayerByUserId(artistUserId) or nil
 		if target and target ~= self.player then
@@ -317,13 +367,23 @@ function UIController:build()
 			end)
 		end
 	end)
-	local report = button(side, self.strings.report, UDim2.new(0.48, -5, 0, 40), UDim2.new(0.52, 0, 0.89, 0), Color3.fromRGB(226, 67, 87))
-	report.MouseButton1Click:Connect(function()
+	attachTooltip(
+		self.blockButton,
+		self.tooltip,
+		"현재 출제자를 Roblox에서 차단합니다. / Block the current artist on Roblox."
+	)
+	self.reportButton = button(side, self.strings.report, UDim2.new(0.48, -5, 0, 40), UDim2.new(0.52, 0, 0.89, 0), Color3.fromRGB(226, 67, 87))
+	self.reportButton.MouseButton1Click:Connect(function()
 		self.remotes.ReportDrawing:FireServer("inappropriate")
 		self.hidden = true
 		self.canvas.Visible = false
 		self.hideButton.Text = "Show / 다시 보기"
 	end)
+	attachTooltip(
+		self.reportButton,
+		self.tooltip,
+		"부적절한 그림을 신고하고 즉시 숨깁니다. / Report and hide inappropriate art."
+	)
 
 	self.choiceFrame = Instance.new("Frame")
 	self.choiceFrame.Size = UDim2.new(0.8, 0, 0, 210)
@@ -347,6 +407,18 @@ function UIController:build()
 	self.toast.Visible = false
 	self.toast.ZIndex = 50
 	corner(self.toast, 14)
+
+	self.modalScrim = Instance.new("TextButton")
+	self.modalScrim.Name = "ModalInputBlocker"
+	self.modalScrim.Size = UDim2.fromScale(1, 1)
+	self.modalScrim.BackgroundColor3 = Color3.fromRGB(20, 18, 35)
+	self.modalScrim.BackgroundTransparency = 0.4
+	self.modalScrim.Text = ""
+	self.modalScrim.AutoButtonColor = false
+	self.modalScrim.Active = true
+	self.modalScrim.Visible = false
+	self.modalScrim.ZIndex = 59
+	self.modalScrim.Parent = gui
 
 	self.modal = Instance.new("Frame")
 	self.modal.Size = UDim2.new(0.76, 0, 0.72, 0)
@@ -377,6 +449,13 @@ function UIController:build()
 	modalLayout.Parent = self.modalList
 	modalLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		self.modalList.CanvasSize = UDim2.fromOffset(0, modalLayout.AbsoluteContentSize.Y + 10)
+	end)
+	self.modal:GetPropertyChangedSignal("Visible"):Connect(function()
+		self.modalScrim.Visible = self.modal.Visible
+		self.canvas.Active = not self.modal.Visible
+		if not self.modal.Visible and self.bubbleComposerController then
+			self.bubbleComposerController:setEnabled(false, "ALL_AGES")
+		end
 	end)
 
 	self.canvasController = CanvasController.new(self.canvas, self.remotes)
@@ -823,6 +902,7 @@ function UIController:onState(payload)
 		self:setCanvasPanelOpen(true)
 	end
 	self.canvasController:setEnabled(payload.state == "Drawing" and isArtist, payload.mode)
+	self.finishDrawingButton.Visible = payload.state == "Drawing" and isArtist
 	self.guessBox.Visible = payload.state == "Drawing" and not isArtist
 	self.reactions.Visible = payload.state == "Reveal"
 

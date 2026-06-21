@@ -17,6 +17,7 @@ local Config = require(ReplicatedStorage.ArtAcademy.Config)
 local services = ServerScriptService.ArtAcademyServer.Services
 local RoundService = require(services.RoundService)
 local PlayerDataService = require(services.PlayerDataService)
+local CanvasService = require(services.CanvasService)
 
 local drawingArtists = {}
 local sawResults = false
@@ -30,6 +31,7 @@ local guesserNeverReceivedChoices = true
 local playerDataSyncs = {}
 local sawFirstHint = false
 local sawSecondHint = false
+local artistSubmittedEarly = false
 
 local remotes = {
 	RoundState = {
@@ -60,6 +62,14 @@ local remotes = {
 				end
 				if payload.seconds == Config.DRAWING_SECONDS then
 					table.insert(drawingArtists, payload.artistUserId)
+					if not artistSubmittedEarly then
+						local stroke = CanvasService.submit(recipient, {
+							x = 0.3, y = 0.3, px = 0.2, py = 0.2, size = 8,
+							color = { r = 1, g = 0, b = 0 }, opacity = 1, stampType = "circle",
+						}, true, "ALL_AGES")
+						local submitted = stroke and RoundService.finishDrawing(recipient)
+						artistSubmittedEarly = submitted == true
+					end
 				end
 			else
 				if payload.prompt ~= nil then
@@ -106,6 +116,7 @@ check(artistAlwaysReceivedPrompt, "artist receives the private drawing prompt")
 check(guesserNeverReceivedPrompt, "guesser never receives the private drawing prompt")
 check(sawFirstHint, "guessers receive a progressive first-letter hint")
 check(sawSecondHint, "guessers receive a stronger late-round hint")
+check(artistSubmittedEarly, "artist can submit a completed drawing before the timer ends")
 check(artistAlwaysReceivedChoices, "artist receives private prompt choices")
 check(guesserNeverReceivedChoices, "guesser never receives prompt choices")
 for roundNumber, artistUserId in drawingArtists do
