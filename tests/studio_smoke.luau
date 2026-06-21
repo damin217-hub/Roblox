@@ -191,7 +191,14 @@ for _, definition in npcDefinitions do
 	check(body ~= nil and body.CFrame.LookVector:Dot(toCenter) > 0.92, definition[1] .. " faces the shared world center")
 	check(character:FindFirstChild(definition[2]) ~= nil, definition[1] .. " has its first role prop")
 	check(character:FindFirstChild(definition[3]) ~= nil, definition[1] .. " has its second role prop")
+	check(character:FindFirstChild("NeckScarf") ~= nil, definition[1] .. " matches the thumbnail scarf silhouette")
+	check(character:FindFirstChild("ApronBib") ~= nil, definition[1] .. " matches the thumbnail painter apron")
+	check(character:FindFirstChild("HairCurl_1") ~= nil, definition[1] .. " uses the thumbnail-inspired layered hair")
+	check(character:FindFirstChild("PaintSplatter_1") ~= nil, definition[1] .. " carries painted costume details")
 end
+local momo = map:FindFirstChild("큐레이터 모모 / Curator Momo")
+check(momo and momo:FindFirstChild("Beret") and momo.Beret.Size.X >= 4, "Momo uses the thumbnail's oversized coral beret")
+check(momo and momo.Head.Size.X >= 3.4, "Momo uses the thumbnail's large friendly head proportion")
 
 local waitingSeatCount = 0
 local academyColumnCount = 0

@@ -62,6 +62,12 @@ local function localPart(parent, name, size, baseCf, offset, color, material)
 	return part(parent, name, size, baseCf * CFrame.new(offset), color, material)
 end
 
+local function localBall(parent, name, size, baseCf, offset, color, material)
+	local item = ball(parent, name, size, (baseCf * CFrame.new(offset)).Position, color, material)
+	item.CFrame = baseCf * CFrame.new(offset)
+	return item
+end
+
 local function cornerLight(parent, position, color, brightness, range)
 	local orb = ball(parent, "AcademyLamp", Vector3.new(0.8, 0.8, 0.8), position, color, Enum.Material.Neon)
 	orb.CanCollide = false
@@ -258,6 +264,31 @@ local function addNpcProp(model, role, baseCf, accent)
 	end
 end
 
+local function addPaintSplatters(model, baseCf, role)
+	local colors = role == "merchant" and { COLORS.cyan, COLORS.gold, COLORS.coral, COLORS.lilac }
+		or role == "teacher" and { COLORS.mint, COLORS.gold, COLORS.cyan, COLORS.coral }
+		or role == "gallery" and { COLORS.lilac, COLORS.coral, COLORS.gold, COLORS.cyan }
+		or { COLORS.coral, COLORS.cyan, COLORS.gold, COLORS.mint, COLORS.lilac }
+	local offsets = {
+		Vector3.new(-0.75, 3.35, -1.31),
+		Vector3.new(0.65, 3.05, -1.32),
+		Vector3.new(-0.25, 2.55, -1.33),
+		Vector3.new(0.9, 2.1, -1.34),
+		Vector3.new(-0.95, 1.85, -1.34),
+	}
+	for index, offset in offsets do
+		local splatter = localBall(
+			model,
+			"PaintSplatter_" .. index,
+			Vector3.new(0.5 + index % 2 * 0.18, 0.5 + (index + 1) % 2 * 0.14, 0.12),
+			baseCf,
+			offset,
+			colors[((index - 1) % #colors) + 1]
+		)
+		splatter.CanCollide = false
+	end
+end
+
 local function npc(parent, name, position, color, actionText, role)
 	local model = Instance.new("Model")
 	model.Name = name
@@ -265,42 +296,82 @@ local function npc(parent, name, position, color, actionText, role)
 	local baseCf = facingCFrame(position, WORLD_CENTER)
 	model:SetAttribute("FacesWorldCenter", true)
 	model:SetAttribute("Role", role or "academy")
+	local skin = role == "gallery" and Color3.fromRGB(123, 82, 63)
+		or role == "merchant" and Color3.fromRGB(224, 176, 140)
+		or Color3.fromRGB(238, 198, 164)
+	local hairColor = role == "gallery" and Color3.fromRGB(35, 27, 30)
+		or role == "teacher" and Color3.fromRGB(82, 49, 38)
+		or Color3.fromRGB(93, 55, 38)
+	local uniform = Color3.fromRGB(237, 226, 208)
+	local apronColor = Color3.fromRGB(57, 48, 73)
 
-	local body = localPart(model, "Body", Vector3.new(3.4, 4.3, 2.2), baseCf, Vector3.new(0, 3.1, 0), color)
-	local coat = localPart(model, "AcademyCoat", Vector3.new(3.65, 2.2, 2.35), baseCf, Vector3.new(0, 3.75, 0.05), COLORS.ink)
+	local body = localPart(model, "Body", Vector3.new(3.45, 4.4, 2.25), baseCf, Vector3.new(0, 3.05, 0), uniform)
+	local coat = localPart(model, "AcademyCoat", Vector3.new(3.7, 2.35, 2.4), baseCf, Vector3.new(0, 3.85, 0.04), uniform)
 	coat.CanCollide = false
-	local apron = localPart(model, "Apron", Vector3.new(2.75, 2.75, 0.25), baseCf, Vector3.new(0, 2.7, -1.18), COLORS.cream)
+	local apron = localPart(model, "Apron", Vector3.new(2.95, 3.2, 0.28), baseCf, Vector3.new(0, 2.45, -1.2), apronColor)
 	apron.CanCollide = false
-	local belt = localPart(model, "AccentBelt", Vector3.new(3, 0.35, 0.28), baseCf, Vector3.new(0, 2.25, -1.22), color)
+	local apronBib = localPart(model, "ApronBib", Vector3.new(2.2, 1.65, 0.3), baseCf, Vector3.new(0, 4.05, -1.23), apronColor)
+	apronBib.CanCollide = false
+	local belt = localPart(model, "AccentBelt", Vector3.new(3.05, 0.38, 0.3), baseCf, Vector3.new(0, 2.22, -1.24), color)
 	belt.CanCollide = false
-	local leftArm = localPart(model, "LeftArm", Vector3.new(1, 3.6, 1), baseCf, Vector3.new(-2.05, 3.35, 0), Color3.fromRGB(238, 198, 164))
+	local leftArm = localPart(model, "LeftArm", Vector3.new(1.15, 3.8, 1.15), baseCf, Vector3.new(-2.15, 3.35, 0), uniform)
 	leftArm.CFrame *= CFrame.Angles(0, 0, math.rad(-7))
-	local rightArm = localPart(model, "RightArm", Vector3.new(1, 3.6, 1), baseCf, Vector3.new(2.05, 3.35, 0), Color3.fromRGB(238, 198, 164))
+	local rightArm = localPart(model, "RightArm", Vector3.new(1.15, 3.8, 1.15), baseCf, Vector3.new(2.15, 3.35, 0), uniform)
 	rightArm.CFrame *= CFrame.Angles(0, 0, math.rad(7))
+	local leftHand = localBall(model, "LeftHand", Vector3.new(1.15, 1.15, 1.15), baseCf, Vector3.new(-2.28, 1.55, -0.1), skin)
+	leftHand.CanCollide = false
+	local rightHand = localBall(model, "RightHand", Vector3.new(1.15, 1.15, 1.15), baseCf, Vector3.new(2.28, 1.55, -0.1), skin)
+	rightHand.CanCollide = false
 	localPart(model, "LeftLeg", Vector3.new(1.25, 2.5, 1.45), baseCf, Vector3.new(-0.88, 0.9, 0), COLORS.ink)
 	localPart(model, "RightLeg", Vector3.new(1.25, 2.5, 1.45), baseCf, Vector3.new(0.88, 0.9, 0), COLORS.ink)
 	localPart(model, "LeftShoe", Vector3.new(1.35, 0.65, 1.85), baseCf, Vector3.new(-0.88, -0.15, -0.18), Color3.fromRGB(31, 30, 43))
 	localPart(model, "RightShoe", Vector3.new(1.35, 0.65, 1.85), baseCf, Vector3.new(0.88, -0.15, -0.18), Color3.fromRGB(31, 30, 43))
 
-	local headPosition = (baseCf * CFrame.new(0, 6.45, 0)).Position
-	local head = ball(model, "Head", Vector3.new(2.75, 2.75, 2.75), headPosition, Color3.fromRGB(238, 198, 164))
-	local hair = localPart(model, "Hair", Vector3.new(2.9, 1.4, 2.85), baseCf, Vector3.new(0, 7.05, 0.35), Color3.fromRGB(62, 42, 54))
-	hair.Shape = Enum.PartType.Ball
+	local head = localBall(model, "Head", Vector3.new(3.45, 3.45, 3.45), baseCf, Vector3.new(0, 6.65, 0), skin)
+	for index, curlOffset in {
+		Vector3.new(-1.25, 7.1, 0.1),
+		Vector3.new(1.25, 7.1, 0.1),
+		Vector3.new(-1.1, 6.1, 0.55),
+		Vector3.new(1.1, 6.1, 0.55),
+		Vector3.new(-0.7, 7.85, 0.2),
+		Vector3.new(0.7, 7.85, 0.2),
+		Vector3.new(0, 8.05, 0.35),
+	} do
+		local curl = localBall(model, "HairCurl_" .. index, Vector3.new(1.45, 1.55, 1.45), baseCf, curlOffset, hairColor)
+		curl.CanCollide = false
+	end
 	cylinder(
 		model,
 		"Beret",
-		Vector3.new(3.15, 0.7, 3.15),
-		baseCf * CFrame.new(0, 7.85, 0) * CFrame.Angles(0, 0, math.rad(90)),
-		color
+		Vector3.new(4.2, 0.75, 4.2),
+		baseCf * CFrame.new(-0.2, 8.35, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		role == "curator" and COLORS.coral or color
 	)
-	for _, x in { -0.48, 0.48 } do
-		local eye = ball(model, "Eye", Vector3.new(0.25, 0.25, 0.25), (baseCf * CFrame.new(x, 6.55, -1.34)).Position, COLORS.ink)
+	local beretStem = localPart(model, "BeretStem", Vector3.new(0.3, 0.85, 0.3), baseCf, Vector3.new(-0.35, 8.9, 0), role == "curator" and COLORS.coral or color)
+	beretStem.CFrame *= CFrame.Angles(0, 0, math.rad(-18))
+	for _, x in { -0.58, 0.58 } do
+		local eye = localBall(model, "Eye", Vector3.new(0.42, 0.55, 0.22), baseCf, Vector3.new(x, 6.7, -1.7), COLORS.ink)
 		eye.CanCollide = false
+		local eyeShine = localBall(model, "EyeShine", Vector3.new(0.13, 0.16, 0.08), baseCf, Vector3.new(x - 0.06, 6.82, -1.82), COLORS.white)
+		eyeShine.CanCollide = false
 	end
-	local nose = ball(model, "Nose", Vector3.new(0.18, 0.18, 0.18), (baseCf * CFrame.new(0, 6.25, -1.38)).Position, Color3.fromRGB(220, 160, 145))
+	local nose = localBall(model, "Nose", Vector3.new(0.2, 0.2, 0.15), baseCf, Vector3.new(0, 6.38, -1.77), Color3.fromRGB(220, 160, 145))
 	nose.CanCollide = false
-	local smile = localPart(model, "Smile", Vector3.new(0.82, 0.13, 0.13), baseCf, Vector3.new(0, 5.92, -1.39), COLORS.coral)
+	local smile = localPart(model, "Smile", Vector3.new(0.9, 0.18, 0.13), baseCf, Vector3.new(0, 5.98, -1.76), Color3.fromRGB(111, 49, 58))
 	smile.CanCollide = false
+	local scarf = cylinder(
+		model,
+		"NeckScarf",
+		Vector3.new(2.25, 0.5, 2.25),
+		baseCf * CFrame.new(0, 5.02, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		role == "curator" and COLORS.coral or color
+	)
+	scarf.CanCollide = false
+	local scarfTailLeft = localPart(model, "ScarfTailLeft", Vector3.new(0.7, 1.9, 0.25), baseCf, Vector3.new(-0.45, 4.35, -1.28), role == "curator" and COLORS.coral or color)
+	scarfTailLeft.CFrame *= CFrame.Angles(0, 0, math.rad(14))
+	local scarfTailRight = localPart(model, "ScarfTailRight", Vector3.new(0.7, 1.7, 0.25), baseCf, Vector3.new(0.45, 4.42, -1.28), role == "curator" and COLORS.coral or color)
+	scarfTailRight.CFrame *= CFrame.Angles(0, 0, math.rad(-14))
+	addPaintSplatters(model, baseCf, role)
 	addNpcProp(model, role, baseCf, color)
 	label(head, name, COLORS.white, 280, 64, Vector3.new(0, 4.5, 0))
 
